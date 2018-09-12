@@ -1,0 +1,49 @@
+env:
+  global:
+    secure: X2kVPUmTBC+WD1IOwxdYlilmxDDrUgsYBUwv2W5PcwHz2o3ZKRMeJA6M4t0k0EwZry7SAMBBNI/6FeoMs4MBSA56cN2nVlmjwoFHQqTDJvXGaRm4QZxnTlqILPQFYHo8849BJtE0JdHUMjaO1ztkUeRuAh2ONM1ktTQpdUrWYV4g8tXdvz+lLUVlSxMxs0ApezqzNbRtIqY5oZkNPNLsEyfVnBorGnL+bGGOqZn6jaGf8n/dt74LWL4MxM313RscvNMqd2WNmC9KnBCqM187ePCBauH534fZvuIriQXKMuX1Q/z+YSqEsnoZiINF+Zdg7/ESWN9p1CPPIPYkzGasEqkb64qoBuN6rmhGEryl/B/m3ulkfg4cPd9Vm/PKqSjjmHM4l3ujcCQadICpIcH1YZcvJrvACslUx0Kbj6/5na3p6e/67khOsGpoYpET1r04B0TA4XfRnaU+uJaTvtfCi/nx2WqkdmbsK7ls73Nho2W+7P9qeWfpdJtfBNeFtUpnYI3b+TXYPwsJBzGlCzBT7RcxSgZ0qjiHay2xQFhAaf/OfxT+Im7quvBFjPOF09QIfbJ1joYCYnv/T1nL8anzZdg3Lw8UTgHfDlIPfEWLhrtHLqvdRxz4ZzvczP6XHJTPk7ONwwSdf5czKccOBLK/sgFcmMJLOQ5Y0eBuYE6Abxc=
+
+language: python
+
+matrix:
+  fast_finish: true
+  include:
+  - language: python
+    python: 3.5
+    os: linux
+    dist: trusty
+  - language: python
+    python: 2.7
+    os: linux
+    dist: trusty
+
+install:
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      pip install --upgrade pip;
+      pip install -e .;
+    fi;
+
+before_script:
+  cd "$TRAVIS_BUILD_DIR";
+  export PYTHONPATH=$PYTHONPATH:$(pwd);
+
+script:
+  - pytest
+
+after_success:
+  - if [ "${$TRAVIS_PULL_REQUEST}" == "false" ] && [ "${$TRAVIS_BRANCH}" == "master" ]; then
+      python -m pip install sphinx;
+      cd docs;
+      make html;
+      cd ..;
+    fi;
+
+deploy:
+  - provider: pages
+    skip-cleanup: true
+    github-token: "$GITHUB_TOKEN"
+    keep-history: true
+    local_dir: docs/_build
+    on:
+      branch: master
+      python: 3.5
+
