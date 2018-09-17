@@ -20,6 +20,6 @@ setup(
                  'Programming Language :: Python :: 3.7',
                  'Intended Audience :: Developers'],
     packages=find_packages(),
-    install_requires=['pytest', 'scipy'],
+    install_requires=['pytest', 'scipy', 'pyshp', 'numpy'],
     package_data={'distopia': ['data/*', ]},
 )

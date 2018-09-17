@@ -40,7 +40,23 @@ class District(object):
 
     def __init__(self, **kwargs):
         super(District, self).__init__(**kwargs)
+        self.clear()
+
+    def clear(self):
+        """Clears all the existing precincts from the district.
+        """
+        for precinct in self.precincts:
+            precinct.district = None
+
         self.boundary = []
         self.neighbours = []
         self.precincts = []
         self.metrics = {}
+
+    def add_precinct(self, precinct):
+        """Adds a precinct to the district.
+
+        :param precinct: :class:`~distopia.precinct.Precinct` instance.
+        """
+        precinct.district = self
+        self.precincts.append(precinct)
