@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>distopia.mapping.voroni &#8212; Distopia  documentation</title>
+    <title>distopia.mapping.voronoi &#8212; Distopia  documentation</title>
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
@@ -32,18 +32,18 @@
 
           <div class="body" role="main">
             
-  <h1>Source code for distopia.mapping.voroni</h1><div class="highlight"><pre>
+  <h1>Source code for distopia.mapping.voronoi</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Voroni Mapping</span>
+<span class="sd">Voronoi Mapping</span>
 <span class="sd">===============</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="k">import</span> <span class="n">Voronoi</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;VoroniMapping&#39;</span><span class="p">,</span> <span class="p">)</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;VoronoiMapping&#39;</span><span class="p">,</span> <span class="p">)</span>
 
 
-<div class="viewcode-block" id="VoroniMapping"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voroni.VoroniMapping">[docs]</a><span class="k">class</span> <span class="nc">VoroniMapping</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Uses the Voroni algorithm to assign precincts to districts.</span>
+<div class="viewcode-block" id="VoronoiMapping"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping">[docs]</a><span class="k">class</span> <span class="nc">VoronoiMapping</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Uses the Voronoi algorithm to assign precincts to districts.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">sites</span> <span class="o">=</span> <span class="p">[]</span>
@@ -59,11 +59,40 @@
     <span class="sd">&quot;&quot;&quot;A list of all current :class:`distopia.district.District` instances.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">screen_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1920</span><span class="p">,</span> <span class="mi">1080</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;The size of the screen, in pixels, on which the districts and</span>
+<span class="sd">    precincts are drawn, and on which the fiducials are drawn.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">fiducial_locations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="sd">&quot;&quot;&quot;List of tuples, each containing the ``(x, y)`` coordinates of the</span>
+<span class="sd">    fiducial at that index.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">VoroniMapping</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VoronoiMapping</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sites</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="p">[]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="VoronoiMapping.add_fiducial"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.add_fiducial">[docs]</a>    <span class="k">def</span> <span class="nf">add_fiducial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds a new fiducial at ``location``.</span>
+
+<span class="sd">        :param location: The fiducial location ``(x, y)``.</span>
+<span class="sd">        :return: The ID of the fiducial.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">i</span></div>
+
+<div class="viewcode-block" id="VoronoiMapping.move_fiducial"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.move_fiducial">[docs]</a>    <span class="k">def</span> <span class="nf">move_fiducial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fiducial</span><span class="p">,</span> <span class="n">location</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Moves ``fiducial`` from its previous location to a new location.</span>
+
+<span class="sd">        :param fiducial: ``fiducial`` ID as returned by :meth:`add_fiducial`.</span>
+<span class="sd">        :param location: The new fiducial location ``(x, y)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="p">[</span><span class="n">fiducial</span><span class="p">]</span> <span class="o">=</span> <span class="n">location</span></div></div>
 </pre></div>
 
           </div>

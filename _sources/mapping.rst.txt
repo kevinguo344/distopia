@@ -4,5 +4,5 @@ Mapping
 .. automodule:: distopia.mapping
    :members:
 
-.. automodule:: distopia.mapping.voroni
+.. automodule:: distopia.mapping.voronoi
    :members:
