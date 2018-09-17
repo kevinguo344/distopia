@@ -14,6 +14,7 @@ Welcome to Distopia's documentation!
    precinct
    district
    mapping
+   utils
 
 
 

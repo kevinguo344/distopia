@@ -43,11 +43,31 @@
 <dt id="distopia.district.District">
 <em class="property">class </em><code class="descclassname">distopia.district.</code><code class="descname">District</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/district.html#District"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.district.District" title="Permalink to this definition">¶</a></dt>
 <dd><p>Describes a district, its precincts and its metrics.</p>
+<dl class="method">
+<dt id="distopia.district.District.add_precinct">
+<code class="descname">add_precinct</code><span class="sig-paren">(</span><em>precinct</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/district.html#District.add_precinct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.district.District.add_precinct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a precinct to the district.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>precinct</strong> – <a class="reference internal" href="precinct.html#distopia.precinct.Precinct" title="distopia.precinct.Precinct"><code class="xref py py-class docutils literal notranslate"><span class="pre">Precinct</span></code></a> instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="distopia.district.District.boundary">
 <code class="descname">boundary</code><em class="property"> = []</em><a class="headerlink" href="#distopia.district.District.boundary" title="Permalink to this definition">¶</a></dt>
 <dd><p>A list of the <code class="docutils literal notranslate"><span class="pre">x</span></code>, <code class="docutils literal notranslate"><span class="pre">y</span></code> coordinates of the polygon that 
 describes the district’s boundary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="distopia.district.District.clear">
+<code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/district.html#District.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.district.District.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears all the existing precincts from the district.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -127,6 +147,7 @@ and other metadata.</p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
 </ul>
 
 <div class="relations">
