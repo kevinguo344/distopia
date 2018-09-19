@@ -18,7 +18,7 @@ class Precinct(object):
     """
 
     boundary = []
-    """A list of the ``x``, ``y`` coordinates of the polygon that 
+    """A nx2 list of the ``x``, ``y`` coordinates of the polygon that
     describes the precinct's boundary.
     """
 
@@ -42,8 +42,11 @@ class Precinct(object):
     contains the metric data for this precinct.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, boundary=None, name='', **kwargs):
         super(Precinct, self).__init__(**kwargs)
-        self.boundary = []
+        if boundary is None:
+            boundary = []
+        self.boundary = boundary
+        self.name = name
         self.neighbours = []
         self.metrics = {}

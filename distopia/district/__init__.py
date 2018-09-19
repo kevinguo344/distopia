@@ -48,7 +48,6 @@ class District(object):
         for precinct in self.precincts:
             precinct.district = None
 
-        self.boundary = []
         self.neighbours = []
         self.precincts = []
         self.metrics = {}

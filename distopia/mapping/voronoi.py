@@ -4,9 +4,9 @@ Voronoi Mapping
 """
 from scipy.spatial import Voronoi
 from distopia.district import District
-from distopia.utils import PolygonCollider
+from kivy.garden.collider import Collide2DPoly as PolygonCollider
 import numpy as np
-import shapefile
+from collections import defaultdict
 
 __all__ = ('VoronoiMapping', )
 
@@ -108,6 +108,18 @@ class VoronoiMapping(object):
         """
         self.fiducial_locations[fiducial] = location
 
+    def remove_fiducial(self, fiducial):
+        """Removes ``fiducial`` from the diagram.
+
+        :param fiducial: ``fiducial`` ID as returned by :meth:`add_fiducial`.
+        """
+        del self.fiducial_locations[fiducial]
+
+    def get_fiducials(self):
+        """Returns a list of the fiducials, indexed by their ID.
+        """
+        return self.fiducial_locations
+
     def assign_precincts_to_districts(self):
         """Uses the pre-computed precinct and district maps and assigns
         all the precincts to districts.
@@ -158,7 +170,7 @@ class VoronoiMapping(object):
                 if 0 <= x < w and 0 <= y < h:
                     pixel_district_map[x, y] = i
 
-    def voronoi_finite_polygons_2d(self, vor, radius=None):
+    def voronoi_finite_polygons_2d(self, vor):
         """
         Reconstruct infinite voronoi regions in a 2D diagram to finite
         regions.
@@ -182,26 +194,22 @@ class VoronoiMapping(object):
             end.
 
         """
-
-        if vor.points.shape[1] != 2:
-            raise ValueError("Requires 2D input")
-
         new_regions = []
         new_vertices = vor.vertices.tolist()
 
         center = vor.points.mean(axis=0)
-        if radius is None:
-            radius = vor.points.ptp().max()*2
+        w, h = self.screen_size
+        radius = 100 * max(w, h)
 
         # Construct a map containing all ridges for a given point
-        all_ridges = {}
+        all_ridges = defaultdict(list)
         for (p1, p2), (v1, v2) in zip(vor.ridge_points, vor.ridge_vertices):
-            all_ridges.setdefault(p1, []).append((p2, v1, v2))
-            all_ridges.setdefault(p2, []).append((p1, v1, v2))
+            all_ridges[p1].append((p2, v1, v2))
+            all_ridges[p2].append((p1, v1, v2))
 
         # Reconstruct infinite regions
-        for p1, region in enumerate(vor.point_region):
-            vertices = vor.regions[region]
+        for p1, region in enumerate(vor.point_region):  # region of each point
+            vertices = vor.regions[region]  # indices of region vertices
 
             if all(v >= 0 for v in vertices):
                 # finite region
@@ -235,7 +243,7 @@ class VoronoiMapping(object):
             # sort region counterclockwise
             vs = np.asarray([new_vertices[v] for v in new_region])
             c = vs.mean(axis=0)
-            angles = np.arctan2(vs[:,1] - c[1], vs[:,0] - c[0])
+            angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
             new_region = np.array(new_region)[np.argsort(angles)]
 
             # finish
