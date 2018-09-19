@@ -16,7 +16,7 @@ from distopia.mapping.voronoi import VoronoiMapping
 import math
 from kivy.uix.widget import Widget
 from kivy.app import App
-from kivy.graphics.vertex_instructions import Line, Point
+from kivy.graphics.vertex_instructions import Line, Point, Mesh
 from kivy.graphics import Color
 from matplotlib import colors as mcolors
 from matplotlib.patches import Polygon
@@ -32,7 +32,6 @@ def read_wisconsin_data(
     # https://elections.wi.gov/sites/default/files/11.4.14%20Election%20Results-all%20offices-w%20x%20w%20report.pdf
     # https://www.cityofmadison.com/planning/unit_planning/map_aldermanic/ald_dist_8x10.pdf
     # wards are precincts?
-    width, height = map(float, screen_size)
     data_path = os.path.join(
         os.path.dirname(distopia.__file__), 'data', dataset, dataset)
 
@@ -83,19 +82,21 @@ def read_wisconsin_data(
                 poly_list.append(arr)
         polygons.append(poly_list)
 
-    # normalize to the screen size
-    max_x, max_y = math.ceil(max_x), math.ceil(max_y)
-    min_x, min_y = math.floor(min_x), math.floor(min_y)
-    x_ratio = width / (max_x - min_x)
-    y_ratio = height / (max_y - min_y)
-    ratio = min(x_ratio, y_ratio)
+    if screen_size is not None:
+        width, height = map(float, screen_size)
+        # normalize to the screen size
+        max_x, max_y = math.ceil(max_x), math.ceil(max_y)
+        min_x, min_y = math.floor(min_x), math.floor(min_y)
+        x_ratio = width / (max_x - min_x)
+        y_ratio = height / (max_y - min_y)
+        ratio = min(x_ratio, y_ratio)
 
-    for precinct_polygons in polygons:
-        for polygon in precinct_polygons:
-            polygon[:, 0] -= min_x
-            polygon[:, 0] *= ratio
-            polygon[:, 1] -= min_y
-            polygon[:, 1] *= ratio
+        for precinct_polygons in polygons:
+            for polygon in precinct_polygons:
+                polygon[:, 0] -= min_x
+                polygon[:, 0] *= ratio
+                polygon[:, 1] -= min_y
+                polygon[:, 1] *= ratio
 
     return polygons, records, fields
 
@@ -112,19 +113,20 @@ def make_mapping(precinct_data):
 
 def plot_wards():
     colors = cycle(['r', 'g', 'b', 'y'])
-    precinct_polygons, records, fields = read_wisconsin_data()
-    # records = [r for r in records if r[6] == 'Madison']
+    precinct_polygons, records, fields = read_wisconsin_data(screen_size=None)
     for record, polygons in zip(records, precinct_polygons):
         color = next(colors)
         polygon = polygons[0]
         plt.fill(polygons[0][:, 0], polygons[0][:, 1], color, edgecolor='k')
-        # plt.gca().annotate(
-        #     record[9] + ' ' + record[12], (np.mean(polygon[:, 0]), np.mean(polygon[:, 1])),
-        #     color='w', weight='bold', fontsize=6, ha='center', va='center')
+        if record[6] != 'Madison':
+            continue
+        plt.gca().annotate(
+            record[9] + ' ' + record[12], (np.mean(polygon[:, 0]), np.mean(polygon[:, 1])),
+            color='w', weight='bold', fontsize=6, ha='center', va='center')
 
         # for polygon in polygons[1:]:
         #     plt.fill(polygon[:, 0], polygon[:, 1], 'w')
-        #     #plt.gca().add_patch(Polygon(polygon))
+            #plt.gca().add_patch(Polygon(polygon))
     plt.show()
 
 
@@ -132,13 +134,36 @@ class VoronoiWidget(Widget):
 
     vor = None
 
-    fiducial_graphics = {}
+    fiducial_graphics = []
 
     district_graphics = []
 
-    def __init__(self, **kwargs):
+    precinct_graphics = {}
+
+    def __init__(self, vor=None, **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.fiducials = {}
+        self.vor = vor
+
+        precinct_graphics = self.precinct_graphics = {}
+        with self.canvas:
+            for precinct in vor.precincts:
+                points_x = precinct.boundary[0::2]
+                points_y = precinct.boundary[1::2]
+                # points_x.append(points_x[0])
+                # points_y.append(points_y[0])
+                padding = [0, ] * len(points_x)
+                vertices = [
+                    val for item in zip(points_x, points_y, padding, padding)
+                    for val in item]
+                indices = list(range(len(points_x)))
+
+                c = Color(rgba=(0, 0, 0, 1))
+                m = Mesh(vertices=vertices, indices=indices)
+                m.mode = 'triangle_fan'
+                c2 = Color(rgba=(0, 1, 0, 1))
+                line = Line(points=precinct.boundary, width=1)
+                precinct_graphics[precinct] = (c, m, line, c2)
 
     def on_touch_up(self, touch):
         x, y = touch.pos
@@ -156,7 +181,7 @@ class VoronoiWidget(Widget):
             with self.canvas:
                 color = Color(rgba=(1, 0, 0, 1))
                 point = Point(points=touch.pos, pointsize=4)
-                self.fiducial_graphics[i] = color, point
+                self.fiducial_graphics.append((color, point))
 
         for item in self.district_graphics:
             self.canvas.remove(item)
@@ -165,13 +190,22 @@ class VoronoiWidget(Widget):
         if len(self.vor.get_fiducials()) <= 3:
             return True
 
+        import time
+        t0 = time.clock()
+        print('initialo')
         self.vor.compute_district_pixels()
+        print('init2', time.clock() - t0)
         self.vor.assign_precincts_to_districts()
+        print('init3', time.clock() - t0)
 
         with self.canvas:
             district_graphics.append(Color(rgba=(0, 0, 1, 1)))
             for district in self.vor.districts:
                 district_graphics.append(Line(points=district.boundary, width=3))
+
+        for color, district in zip(cycle(mcolors.BASE_COLORS.values()), self.vor.districts):
+            for precinct in district.precincts:
+                self.precinct_graphics[precinct][0].rgb = color
 
 
 class VoronoiApp(App):
@@ -189,13 +223,7 @@ class VoronoiApp(App):
 
         self.vor = vor = make_mapping(precinct_data)
 
-        widget = VoronoiWidget()
-        widget.vor = vor
-        with widget.canvas:
-            Color(rgba=(0, 1, 0, 1))
-            for precinct in vor.precincts:
-                Line(points=precinct.boundary, width=1)
-
+        widget = VoronoiWidget(vor=vor)
         return widget
 
 

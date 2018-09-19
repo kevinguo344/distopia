@@ -7,6 +7,8 @@ from distopia.district import District
 from kivy.garden.collider import Collide2DPoly as PolygonCollider
 import numpy as np
 from collections import defaultdict
+import time
+import math
 
 __all__ = ('VoronoiMapping', )
 
@@ -50,15 +52,12 @@ class VoronoiMapping(object):
     fiducial at that index.
     """
 
-    pixel_precinct_map = None
-    """A width by height matrix, where each item is the precinct index in
-    :attr:`precincts` it belongs to, or ``2 ** 16 - 1`` if None.
-    """
-
     pixel_district_map = None
     """A width by height matrix, where each item is the district index in
     :attr:`districts` it belongs to.
     """
+
+    precinct_indices = []
 
     def __init__(self, **kwargs):
         super(VoronoiMapping, self).__init__(**kwargs)
@@ -77,18 +76,22 @@ class VoronoiMapping(object):
             instances.
         """
         w, h = self.screen_size
-        pixel_precinct_map = self.pixel_precinct_map = np.ones(
-            (w, h), dtype=np.uint16) * (2 ** 16 - 1)
-
         self.precincts = list(precincts)
         colliders = self.precinct_colliders = [
             PolygonCollider(points=precinct.boundary, cache=True) for
             precinct in precincts]
 
+        precinct_indices = self.precinct_indices = []
         for i, (precinct, collider) in enumerate(zip(precincts, colliders)):
+            x1, y1, x2, y2 = collider.bounding_box()
+            x0, y0 = int(x1), int(y1)
+            p_w, p_h = x2 - x1 + 1, y2 - y1 + 1
+            precinct_values = np.zeros((p_w, p_h), dtype=np.bool_)
+            precinct_indices.append((x0, y0, x0 + p_w, y0 + p_h, precinct_values))
+
             for x, y in collider.get_inside_points():
                 if 0 <= x < w and 0 <= y < h:
-                    pixel_precinct_map[x, y] = i
+                    precinct_values[x - x0, y - y0] = True
 
     def add_fiducial(self, location):
         """Adds a new fiducial at ``location``.
@@ -126,16 +129,18 @@ class VoronoiMapping(object):
         """
         precincts = self.precincts
         districts = self.districts
-
-        precinct_map = self.pixel_precinct_map
         district_map = self.pixel_district_map
 
         for district in districts:
             district.clear()
 
-        for i, precinct in enumerate(precincts):
-            district_indices = district_map[precinct_map == i]
+        for i, (precinct, (x0, y0, x1, y1, indices)) in enumerate(zip(precincts, self.precinct_indices)):
+            district_indices = district_map[x0:x1, y0:y1][indices]
+            district_indices = district_indices[district_indices != 2 ** 16 - 1]
+            if not len(district_indices):
+                continue
             indices, counts = np.unique(district_indices, return_counts=True)
+            #print(district_indices, indices, counts)
             district = districts[indices[np.argmax(counts)]]
 
             district.add_precinct(precinct)
@@ -145,8 +150,11 @@ class VoronoiMapping(object):
         associated districts.
         """
         fiducials = np.asarray(self.fiducial_locations)
+        t0 = time.clock()
         vor = Voronoi(fiducials)
+        print('voro', time.clock() - t0)
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
+        print('voro_full', time.clock() - t0)
 
         w, h = self.screen_size
         pixel_district_map = self.pixel_district_map = np.ones(
@@ -156,6 +164,7 @@ class VoronoiMapping(object):
         self.district_colliders = colliders = []
 
         for i, region_indices in enumerate(regions):
+            print(vertices[region_indices])
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
             collider = PolygonCollider(points=poly, cache=True)
 
@@ -169,6 +178,7 @@ class VoronoiMapping(object):
             for x, y in collider.get_inside_points():
                 if 0 <= x < w and 0 <= y < h:
                     pixel_district_map[x, y] = i
+        print('district_assign', time.clock() - t0)
 
     def voronoi_finite_polygons_2d(self, vor):
         """
@@ -218,24 +228,83 @@ class VoronoiMapping(object):
 
             # reconstruct a non-finite region
             ridges = all_ridges[p1]
+            # get all vertices that already exists
             new_region = [v for v in vertices if v >= 0]
 
+            # all the ridges that make the region
             for p2, v1, v2 in ridges:
+                # if the second point of the ridge is outside the finite area,
+                # one and only one of the vertex indices will be -1
                 if v2 < 0:
                     v1, v2 = v2, v1
                 if v1 >= 0:
+                    assert v2 >= 0
                     # finite ridge: already in the region
                     continue
 
                 # Compute the missing endpoint of an infinite ridge
 
-                t = vor.points[p2] - vor.points[p1] # tangent
+                t = vor.points[p2] - vor.points[p1]  # tangent
                 t /= np.linalg.norm(t)
-                n = np.array([-t[1], t[0]])  # normal
+                # normal, facing to the left of the line between p1 - p2
+                n = np.array([-t[1], t[0]])
 
+                # find midpoint between the two points
                 midpoint = vor.points[[p1, p2]].mean(axis=0)
+                # find whether the normal points in the same direction as the
+                # line made by the center of the voronoi points with midpoint.
+                # If it faces the opposite direction, reorient to face from
+                # the center to midpoint direction (i.e. away from the center)
                 direction = np.sign(np.dot(midpoint - center, n)) * n
-                far_point = vor.vertices[v2] + direction * radius
+                # add a point very far from
+                x1, y1 = vor.vertices[v2]
+                x2, y2 = far_point = vor.vertices[v2] + direction * radius
+
+                slope = (y2 - y1) / (x2 - x1)
+                offset = y1 - slope * x1
+                # test if it intersects with top or bottom of screen
+                if math.isclose(slope, 0):
+                    x2 = min(max(x2, 0), w - 1)
+                elif not math.isfinite(slope):
+                    y2 = min(max(y2, 0), h - 1)
+                else:
+                    x_top = (h - 1 - offset) / slope  # set y to h - 1, solve x
+                    x_bot = (0 - offset) / slope  # set y to 0, solve x
+                    y_left = slope * 0 + offset  # set x to 0, solve y
+                    y_right = slope * (w - 1) + offset  # set x to w - 1, solve y
+                    if direction[0] > 0:
+                        if direction[1] > 0:
+                            if 0 <= x_top <= w - 1:
+                                y2 = h - 1
+                                x2 = x_top
+                            elif 0 <= y_right <= h - 1:
+                                y2 = y_right
+                                x2 = w - 1
+                        else:
+                            if 0 <= x_bot <= w - 1:
+                                y2 = 0
+                                x2 = x_bot
+                            elif 0 <= y_right <= h - 1:
+                                y2 = y_right
+                                x2 = w - 1
+                    else:
+                        if direction[1] > 0:
+                            if 0 <= x_top <= w - 1:
+                                y2 = h - 1
+                                x2 = x_top
+                            elif 0 <= y_left <= h - 1:
+                                y2 = y_left
+                                x2 = 0
+                        else:
+                            if 0 <= x_bot <= w - 1:
+                                y2 = 0
+                                x2 = x_bot
+                            elif 0 <= y_left <= h - 1:
+                                y2 = y_left
+                                x2 = 0
+
+                far_point[0] = min(max(x2, 0), w - 1)
+                far_point[1] = min(max(y2, 0), h - 1)
 
                 new_region.append(len(new_vertices))
                 new_vertices.append(far_point.tolist())
