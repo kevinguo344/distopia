@@ -149,22 +149,24 @@ class VoronoiWidget(Widget):
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
             for precinct in vor.precincts:
-                points_x = precinct.boundary[0::2]
-                points_y = precinct.boundary[1::2]
-                # points_x.append(points_x[0])
-                # points_y.append(points_y[0])
-                padding = [0, ] * len(points_x)
-                vertices = [
-                    val for item in zip(points_x, points_y, padding, padding)
-                    for val in item]
-                indices = list(range(len(points_x)))
+                assert len(precinct.boundary) >= 6
+                tess = Tesselator()
+                tess.add_contour(precinct.boundary)
+                tess.tesselate(WINDING_ODD, TYPE_POLYGONS)
 
-                c = Color(rgba=(0, 0, 0, 1))
-                m = Mesh(vertices=vertices, indices=indices)
-                m.mode = 'triangle_fan'
-                c2 = Color(rgba=(0, 1, 0, 1))
-                line = Line(points=precinct.boundary, width=1)
-                precinct_graphics[precinct] = (c, m, line, c2)
+                graphics = [
+                    Color(rgba=(0, 0, 0, 1))]
+                for vertices, indices in tess.meshes:
+                    graphics.append(
+                        Mesh(
+                            vertices=vertices, indices=indices,
+                            mode="triangle_fan"))
+
+                graphics.append(
+                    Color(rgba=(0, 1, 0, 1)))
+                graphics.append(
+                    Line(points=precinct.boundary, width=1))
+                precinct_graphics[precinct] = graphics
 
     def on_touch_up(self, touch):
         x, y = touch.pos
@@ -209,7 +211,7 @@ class VoronoiApp(App):
 
     vor = None
 
-    county_map = False
+    county_map = True
 
     def build(self):
         dataset = 'County_Boundaries_24K' if self.county_map \
