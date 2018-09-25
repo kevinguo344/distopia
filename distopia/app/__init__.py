@@ -17,6 +17,7 @@ import math
 from kivy.uix.widget import Widget
 from kivy.app import App
 from kivy.graphics.vertex_instructions import Line, Point, Mesh
+from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
 from kivy.graphics import Color
 from matplotlib import colors as mcolors
 from matplotlib.patches import Polygon
@@ -31,20 +32,20 @@ def read_wisconsin_data(
     # https://elections.wi.gov/elections-voting/results/2016/fall-general
     # https://elections.wi.gov/sites/default/files/11.4.14%20Election%20Results-all%20offices-w%20x%20w%20report.pdf
     # https://www.cityofmadison.com/planning/unit_planning/map_aldermanic/ald_dist_8x10.pdf
+    # https://data-wi-dnr.opendata.arcgis.com/datasets/county-boundaries-24k
     # wards are precincts?
     data_path = os.path.join(
         os.path.dirname(distopia.__file__), 'data', dataset, dataset)
 
     shp = shapefile.Reader(data_path)
     fields = [f[0] for f in shp.fields if not isinstance(f, tuple)]
-    district_i = fields.index('CON')
     shapes = shp.shapes()
     records = shp.records()
 
     assert len(records)
     assert len(records[0]) == len(fields)
 
-    crs_wgs = Proj(init='epsg:4326')
+    crs_wgs = Proj(init='epsg:3071')
     crs_wisconsin = Proj(init='epsg:3857')
 
     polygons = []
@@ -104,7 +105,7 @@ def read_wisconsin_data(
 def make_mapping(precinct_data):
     vor = VoronoiMapping()
     precincts = []
-    for name, polygon in precinct_data.items():
+    for name, polygon in precinct_data:
         precinct = Precinct(name=name, boundary=polygon.reshape(-1).tolist())
         precincts.append(precinct)
     vor.set_precincts(precincts)
@@ -183,11 +184,10 @@ class VoronoiWidget(Widget):
                 point = Point(points=touch.pos, pointsize=4)
                 self.fiducial_graphics.append((color, point))
 
-        for item in self.district_graphics:
-            self.canvas.remove(item)
-        district_graphics = self.district_graphics = []
-
         if len(self.vor.get_fiducials()) <= 3:
+            for district in self.vor.districts:
+                for precinct in district.precincts:
+                    self.precinct_graphics[precinct][0].rgba = (0, 0, 0, 1)
             return True
 
         import time
@@ -198,12 +198,9 @@ class VoronoiWidget(Widget):
         self.vor.assign_precincts_to_districts()
         print('init3', time.clock() - t0)
 
-        with self.canvas:
-            district_graphics.append(Color(rgba=(0, 0, 1, 1)))
-            for district in self.vor.districts:
-                district_graphics.append(Line(points=district.boundary, width=3))
-
-        for color, district in zip(cycle(mcolors.BASE_COLORS.values()), self.vor.districts):
+        colors = [
+            mcolors.BASE_COLORS[c] for c in ('r', 'c', 'g', 'y', 'm', 'b')]
+        for color, district in zip(cycle(colors), self.vor.districts):
             for precinct in district.precincts:
                 self.precinct_graphics[precinct][0].rgb = color
 
@@ -212,14 +209,18 @@ class VoronoiApp(App):
 
     vor = None
 
-    def build(self):
-        precinct_polygons, records, fields = read_wisconsin_data()
+    county_map = False
 
-        precinct_data = {}
+    def build(self):
+        dataset = 'County_Boundaries_24K' if self.county_map \
+            else 'WI_Election_Data_with_2017_Wards'
+        precinct_polygons, records, fields = read_wisconsin_data(
+            dataset=dataset, screen_size=(1900, 800))
+
+        precinct_data = []
         for record, polygons in zip(records, precinct_polygons):
-            key = '{}_{}_{}'.format(record[1], *record[11:13])
-            assert key not in precinct_data
-            precinct_data[key] = polygons[0]
+            key = str(record[0])
+            precinct_data.append((key, polygons[0]))
 
         self.vor = vor = make_mapping(precinct_data)
 

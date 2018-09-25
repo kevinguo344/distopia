@@ -164,7 +164,6 @@ class VoronoiMapping(object):
         self.district_colliders = colliders = []
 
         for i, region_indices in enumerate(regions):
-            print(vertices[region_indices])
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
             collider = PolygonCollider(points=poly, cache=True)
 
@@ -228,8 +227,11 @@ class VoronoiMapping(object):
 
             # reconstruct a non-finite region
             ridges = all_ridges[p1]
+
             # get all vertices that already exists
-            new_region = [v for v in vertices if v >= 0]
+            temp_vertices = [
+                [(None, None), None, v, new_vertices[v]] for
+                v in vertices if v >= 0]
 
             # all the ridges that make the region
             for p2, v1, v2 in ridges:
@@ -256,66 +258,121 @@ class VoronoiMapping(object):
                 # If it faces the opposite direction, reorient to face from
                 # the center to midpoint direction (i.e. away from the center)
                 direction = np.sign(np.dot(midpoint - center, n)) * n
-                # add a point very far from
-                x1, y1 = vor.vertices[v2]
-                x2, y2 = far_point = vor.vertices[v2] + direction * radius
-
-                slope = (y2 - y1) / (x2 - x1)
-                offset = y1 - slope * x1
-                # test if it intersects with top or bottom of screen
-                if math.isclose(slope, 0):
-                    x2 = min(max(x2, 0), w - 1)
-                elif not math.isfinite(slope):
-                    y2 = min(max(y2, 0), h - 1)
-                else:
-                    x_top = (h - 1 - offset) / slope  # set y to h - 1, solve x
-                    x_bot = (0 - offset) / slope  # set y to 0, solve x
-                    y_left = slope * 0 + offset  # set x to 0, solve y
-                    y_right = slope * (w - 1) + offset  # set x to w - 1, solve y
-                    if direction[0] > 0:
-                        if direction[1] > 0:
-                            if 0 <= x_top <= w - 1:
-                                y2 = h - 1
-                                x2 = x_top
-                            elif 0 <= y_right <= h - 1:
-                                y2 = y_right
-                                x2 = w - 1
-                        else:
-                            if 0 <= x_bot <= w - 1:
-                                y2 = 0
-                                x2 = x_bot
-                            elif 0 <= y_right <= h - 1:
-                                y2 = y_right
-                                x2 = w - 1
-                    else:
-                        if direction[1] > 0:
-                            if 0 <= x_top <= w - 1:
-                                y2 = h - 1
-                                x2 = x_top
-                            elif 0 <= y_left <= h - 1:
-                                y2 = y_left
-                                x2 = 0
-                        else:
-                            if 0 <= x_bot <= w - 1:
-                                y2 = 0
-                                x2 = x_bot
-                            elif 0 <= y_left <= h - 1:
-                                y2 = y_left
-                                x2 = 0
-
-                far_point[0] = min(max(x2, 0), w - 1)
-                far_point[1] = min(max(y2, 0), h - 1)
-
-                new_region.append(len(new_vertices))
-                new_vertices.append(far_point.tolist())
-
-            # sort region counterclockwise
-            vs = np.asarray([new_vertices[v] for v in new_region])
-            c = vs.mean(axis=0)
-            angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
-            new_region = np.array(new_region)[np.argsort(angles)]
+                # add a point very far from the last point
+                far_point = vor.vertices[v2] + direction * radius
+                temp_vertices.append(
+                    [vor.vertices[v2], direction, None, far_point])
 
             # finish
-            new_regions.append(new_region.tolist())
+            new_region = self.fix_voronoi_infinite_regions(
+                temp_vertices, w - 1, h - 1, new_vertices)
+            new_regions.append(new_region)
 
         return new_regions, np.asarray(new_vertices)
+
+    def fix_voronoi_infinite_regions(
+            self, vertices, w_max, h_max, new_vertices):
+        vs = np.asarray([v[3] for v in vertices])
+        c = vs.mean(axis=0)
+        angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
+        vertices = [vertices[i] for i in np.argsort(angles)]
+
+        for i, ((x1, y1), direction, v, (x2, y2)) in enumerate(vertices):
+            if direction is None:
+                continue
+
+            slope = (y2 - y1) / (x2 - x1)
+            offset = y1 - slope * x1
+            # test if it intersects with top or bottom of screen
+            if math.isclose(slope, 0):
+                x2 = min(max(x2, 0), w_max)
+            elif not math.isfinite(slope):
+                y2 = min(max(y2, 0), h_max)
+            else:
+                x_top = (h_max - offset) / slope  # set y to h_max, solve x
+                x_bot = (0 - offset) / slope  # set y to 0, solve x
+                y_left = slope * 0 + offset  # set x to 0, solve y
+                y_right = slope * w_max + offset  # set x to w_max, solve y
+                if direction[0] > 0:
+                    if direction[1] > 0:
+                        if 0 <= x_top <= w_max:
+                            y2 = h_max
+                            x2 = x_top
+                        elif 0 <= y_right <= h_max:
+                            y2 = y_right
+                            x2 = w_max
+                    else:
+                        if 0 <= x_bot <= w_max:
+                            y2 = 0
+                            x2 = x_bot
+                        elif 0 <= y_right <= h_max:
+                            y2 = y_right
+                            x2 = w_max
+                else:
+                    if direction[1] > 0:
+                        if 0 <= x_top <= w_max:
+                            y2 = h_max
+                            x2 = x_top
+                        elif 0 <= y_left <= h_max:
+                            y2 = y_left
+                            x2 = 0
+                    else:
+                        if 0 <= x_bot <= w_max:
+                            y2 = 0
+                            x2 = x_bot
+                        elif 0 <= y_left <= h_max:
+                            y2 = y_left
+                            x2 = 0
+
+            x2 = min(max(x2, 0), w_max)
+            y2 = min(max(y2, 0), h_max)
+            vertices[i][3] = x2, y2
+
+        region_verts_i = []
+        for i, item in enumerate(vertices):
+            if item[1] is None:
+                region_verts_i.append(item[2])
+            else:
+                region_verts_i.append(len(new_vertices))
+                new_vertices.append(item[3])
+
+            if i == len(vertices) - 1:
+                next_item = vertices[0]
+            else:
+                next_item = vertices[i + 1]
+
+            # if one of the points is within the space, then we never add an
+            # intermediate point because only two infinite points may contain
+            # a corner between them
+            if item[2] is not None or next_item[2] is not None:
+                continue
+
+            x1, y1 = item[3]
+            x2, y2 = next_item[3]
+            new_points = []
+            if y1 == h_max and x2 == 0:
+                new_points.append((0, h_max))
+            elif x1 == 0 and y2 == 0:
+                new_points.append((0, 0))
+            elif y1 == 0 and x2 == w_max:
+                new_points.append((w_max, 0))
+            elif x1 == w_max and y2 == h_max:
+                new_points.append((w_max, h_max))
+            elif y1 == h_max and y2 == 0:
+                new_points.append((0, h_max))
+                new_points.append((0, 0))
+            elif x1 == 0 and x2 == w_max:
+                new_points.append((0, 0))
+                new_points.append((w_max, 0))
+            elif y1 == 0 and y2 == h_max:
+                new_points.append((w_max, 0))
+                new_points.append((w_max, h_max))
+            elif x1 == w_max and x2 == 0:
+                new_points.append((w_max, h_max))
+                new_points.append((0, h_max))
+
+            for new_point in new_points:
+                region_verts_i.append(len(new_vertices))
+                new_vertices.append(new_point)
+
+        return region_verts_i
