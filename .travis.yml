@@ -19,6 +19,7 @@ matrix:
 install:
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       pip install --upgrade pip;
+      pip install Cython;
       pip install -e .;
     fi;
 
