@@ -41,17 +41,27 @@
  | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
+ | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.add_fiducial">add_fiducial() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="district.html#distopia.district.District.add_precinct">add_precinct() (distopia.district.District method)</a>
+</li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts">assign_precincts_to_districts() (distopia.mapping.voronoi.VoronoiMapping method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -67,8 +77,12 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="utils.html#distopia.utils.PolygonCollider.bounding_box">bounding_box() (distopia.utils.PolygonCollider method)</a>
+      <li><a href="mapping.html#distopia.mapping._voronoi.PolygonCollider.bounding_box">bounding_box() (distopia.mapping._voronoi.PolygonCollider method)</a>
+
+      <ul>
+        <li><a href="utils.html#distopia.utils.PolygonCollider.bounding_box">(distopia.utils.PolygonCollider method)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -78,6 +92,12 @@
       <li><a href="district.html#distopia.district.District.clear">clear() (distopia.district.District method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels">compute_district_pixels() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+      <li><a href="app.html#distopia.app.geo_data.GeoData.containing_rect">containing_rect (distopia.app.geo_data.GeoData attribute)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="D">D</h2>
@@ -85,16 +105,24 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="distopia.html#module-distopia">distopia (module)</a>
 </li>
+      <li><a href="app.html#module-distopia.app">distopia.app (module)</a>
+</li>
+      <li><a href="app.html#module-distopia.app.geo_data">distopia.app.geo_data (module)</a>
+</li>
       <li><a href="district.html#module-distopia.district">distopia.district (module)</a>
 </li>
       <li><a href="district.html#module-distopia.district.metrics">distopia.district.metrics (module)</a>
 </li>
       <li><a href="mapping.html#module-distopia.mapping">distopia.mapping (module)</a>
 </li>
-      <li><a href="precinct.html#module-distopia.precinct">distopia.precinct (module)</a>
+      <li><a href="mapping.html#module-distopia.mapping._voronoi">distopia.mapping._voronoi (module)</a>
+</li>
+      <li><a href="mapping.html#module-distopia.mapping.voronoi">distopia.mapping.voronoi (module)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="precinct.html#module-distopia.precinct">distopia.precinct (module)</a>
+</li>
       <li><a href="precinct.html#module-distopia.precinct.metrics">distopia.precinct.metrics (module)</a>
 </li>
       <li><a href="utils.html#module-distopia.utils">distopia.utils (module)</a>
@@ -103,7 +131,19 @@
 </li>
       <li><a href="precinct.html#distopia.precinct.Precinct.district">district (distopia.precinct.Precinct attribute)</a>
 </li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.district_colliders">district_colliders (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
       <li><a href="district.html#distopia.district.metrics.DistrictMetric">DistrictMetric (class in distopia.district.metrics)</a>
+</li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.districts">districts (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.fiducial_locations">fiducial_locations (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -111,13 +151,29 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="utils.html#distopia.utils.PolygonCollider.get_inside_points">get_inside_points() (distopia.utils.PolygonCollider method)</a>
+      <li><a href="app.html#distopia.app.geo_data.GeoData.generate_polygons">generate_polygons() (distopia.app.geo_data.GeoData method)</a>
 </li>
+      <li><a href="app.html#distopia.app.geo_data.GeoData">GeoData (class in distopia.app.geo_data)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.get_fiducials">get_fiducials() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+      <li><a href="mapping.html#distopia.mapping._voronoi.PolygonCollider.get_inside_points">get_inside_points() (distopia.mapping._voronoi.PolygonCollider method)</a>
+
+      <ul>
+        <li><a href="utils.html#distopia.utils.PolygonCollider.get_inside_points">(distopia.utils.PolygonCollider method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="app.html#distopia.app.geo_data.GeoData.load_data">load_data() (distopia.app.geo_data.GeoData method)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="precinct.html#distopia.precinct.Precinct.location">location (distopia.precinct.Precinct attribute)</a>
 </li>
@@ -133,6 +189,10 @@
         <li><a href="precinct.html#distopia.precinct.Precinct.metrics">(distopia.precinct.Precinct attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.move_fiducial">move_fiducial() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -163,15 +223,63 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="utils.html#distopia.utils.PolygonCollider">PolygonCollider (class in distopia.utils)</a>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.pixel_district_map">pixel_district_map (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
 </li>
+      <li><a href="mapping.html#distopia.mapping._voronoi.PolygonCollider">PolygonCollider (class in distopia.mapping._voronoi)</a>
+
+      <ul>
+        <li><a href="utils.html#distopia.utils.PolygonCollider">(class in distopia.utils)</a>
+</li>
+      </ul></li>
       <li><a href="precinct.html#distopia.precinct.Precinct">Precinct (class in distopia.precinct)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.precinct_colliders">precinct_colliders (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
       <li><a href="precinct.html#distopia.precinct.metrics.PrecinctMetric">PrecinctMetric (class in distopia.precinct.metrics)</a>
 </li>
       <li><a href="district.html#distopia.district.District.precincts">precincts (distopia.district.District attribute)</a>
+
+      <ul>
+        <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.precincts">(distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.remove_fiducial">remove_fiducial() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="app.html#distopia.app.geo_data.GeoData.scale_to_screen">scale_to_screen() (distopia.app.geo_data.GeoData method)</a>
+</li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.screen_size">screen_size (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.set_precincts">set_precincts() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.sites">sites (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.voronoi_finite_polygons_2d">voronoi_finite_polygons_2d() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping">VoronoiMapping (class in distopia.mapping.voronoi)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -200,6 +308,7 @@
 <li class="toctree-l1"><a class="reference internal" href="precinct.html">Precinct</a></li>
 <li class="toctree-l1"><a class="reference internal" href="district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app.html">Mapping</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
 </ul>
 

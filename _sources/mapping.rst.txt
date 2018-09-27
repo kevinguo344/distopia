@@ -6,3 +6,6 @@ Mapping
 
 .. automodule:: distopia.mapping.voronoi
    :members:
+
+.. automodule:: distopia.mapping._voronoi
+   :members:
