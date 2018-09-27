@@ -1,3 +1,9 @@
 *.pyc
 .git/
 .idea/
+*.c
+*.so
+*.pyd
+.cache
+build
+docs/_build

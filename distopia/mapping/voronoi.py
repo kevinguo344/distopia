@@ -4,7 +4,7 @@ Voronoi Mapping
 """
 from scipy.spatial import Voronoi
 from distopia.district import District
-from kivy.garden.collider import Collide2DPoly as PolygonCollider
+from distopia.mapping._voronoi import PolygonCollider
 import numpy as np
 from collections import defaultdict
 import time
@@ -47,9 +47,9 @@ class VoronoiMapping(object):
     It's ``(width, height)``
     """
 
-    fiducial_locations = []
-    """List of tuples, each containing the ``(x, y)`` coordinates of the
-    fiducial at that index.
+    fiducial_locations = {}
+    """dict of tuples, each containing the ``(x, y)`` coordinates of the
+    fiducial at that key.
     """
 
     pixel_district_map = None
@@ -59,13 +59,15 @@ class VoronoiMapping(object):
 
     precinct_indices = []
 
+    _fiducial_count = 0
+
     def __init__(self, **kwargs):
         super(VoronoiMapping, self).__init__(**kwargs)
         self.sites = []
         self.precincts = []
         self.districts = []
         self.precinct_colliders = []
-        self.fiducial_locations = []
+        self.fiducial_locations = {}
 
     def set_precincts(self, precincts):
         """Adds the precincts to be used by the mapping.
@@ -84,23 +86,23 @@ class VoronoiMapping(object):
         precinct_indices = self.precinct_indices = []
         for i, (precinct, collider) in enumerate(zip(precincts, colliders)):
             x1, y1, x2, y2 = collider.bounding_box()
-            x0, y0 = int(x1), int(y1)
-            p_w, p_h = x2 - x1 + 1, y2 - y1 + 1
-            precinct_values = np.zeros((p_w, p_h), dtype=np.bool_)
-            precinct_indices.append((x0, y0, x0 + p_w, y0 + p_h, precinct_values))
+            precinct_values = np.zeros(
+                (x2 - x1 + 1, y2 - y1 + 1), dtype=np.uint8)
+            precinct_indices.append((x1, y1, x2 + 1, y2 + 1, precinct_values))
 
             for x, y in collider.get_inside_points():
                 if 0 <= x < w and 0 <= y < h:
-                    precinct_values[x - x0, y - y0] = True
+                    precinct_values[x - x1, y - y1] = 1
 
     def add_fiducial(self, location):
         """Adds a new fiducial at ``location``.
 
         :param location: The fiducial location ``(x, y)``.
-        :return: The ID of the fiducial.
+        :return: The (assigned) ID of the fiducial.
         """
-        i = len(self.fiducial_locations)
-        self.fiducial_locations.append(location)
+        i = self._fiducial_count
+        self._fiducial_count += 1
+        self.fiducial_locations[i] = location
         return i
 
     def move_fiducial(self, fiducial, location):
@@ -119,7 +121,7 @@ class VoronoiMapping(object):
         del self.fiducial_locations[fiducial]
 
     def get_fiducials(self):
-        """Returns a list of the fiducials, indexed by their ID.
+        """Returns a dict of the fiducials, keys are their ID.
         """
         return self.fiducial_locations
 
@@ -134,31 +136,33 @@ class VoronoiMapping(object):
         for district in districts:
             district.clear()
 
-        for i, (precinct, (x0, y0, x1, y1, indices)) in enumerate(zip(precincts, self.precinct_indices)):
-            district_indices = district_map[x0:x1, y0:y1][indices]
-            district_indices = district_indices[district_indices != 2 ** 16 - 1]
-            if not len(district_indices):
+        bins = np.empty((len(districts), ), dtype=np.uint64)
+        for i, (precinct, (x0, y0, x1, y1, mask), collider) in enumerate(
+                zip(precincts, self.precinct_indices, self.precinct_colliders)):
+            bins[:] = 0
+            district_i = collider.get_arg_max_count(
+                district_map[x0:x1, y0:y1], mask, bins, len(districts), x1 - x0,
+                y1 - y0, 2 ** 8 - 1)
+            if district_i == 2 ** 8 - 1:
                 continue
-            indices, counts = np.unique(district_indices, return_counts=True)
-            #print(district_indices, indices, counts)
-            district = districts[indices[np.argmax(counts)]]
 
-            district.add_precinct(precinct)
+            districts[district_i].add_precinct(precinct)
 
     def compute_district_pixels(self):
         """Computes the assignment of pixels to districts and creates the
         associated districts.
         """
-        fiducials = np.asarray(self.fiducial_locations)
+        fiducials = np.asarray(list(self.fiducial_locations.values()))
         t0 = time.clock()
         vor = Voronoi(fiducials)
         print('voro', time.clock() - t0)
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
         print('voro_full', time.clock() - t0)
 
+        assert len(regions) <= 2 ** 8 - 2
         w, h = self.screen_size
         pixel_district_map = self.pixel_district_map = np.ones(
-            (w, h), dtype=np.uint16) * (2 ** 16 - 1)
+            (w, h), dtype=np.uint8) * (2 ** 8 - 1)
 
         self.districts = districts = []
         self.district_colliders = colliders = []
@@ -166,6 +170,7 @@ class VoronoiMapping(object):
         for i, region_indices in enumerate(regions):
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
             collider = PolygonCollider(points=poly, cache=True)
+            collider.mark_pixels(pixel_district_map, w, h, i)
 
             district = District()
             district.name = str(i)
@@ -174,9 +179,6 @@ class VoronoiMapping(object):
             districts.append(district)
             colliders.append(collider)
 
-            for x, y in collider.get_inside_points():
-                if 0 <= x < w and 0 <= y < h:
-                    pixel_district_map[x, y] = i
         print('district_assign', time.clock() - t0)
 
     def voronoi_finite_polygons_2d(self, vor):
@@ -264,14 +266,15 @@ class VoronoiMapping(object):
                     [vor.vertices[v2], direction, None, far_point])
 
             # finish
-            new_region = self.fix_voronoi_infinite_regions(
+            self.fix_voronoi_infinite_regions(temp_vertices, w - 1, h - 1)
+            new_region = self.add_missing_polygon_points(
                 temp_vertices, w - 1, h - 1, new_vertices)
             new_regions.append(new_region)
 
         return new_regions, np.asarray(new_vertices)
 
     def fix_voronoi_infinite_regions(
-            self, vertices, w_max, h_max, new_vertices):
+            self, vertices, w_max, h_max):
         vs = np.asarray([v[3] for v in vertices])
         c = vs.mean(axis=0)
         angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
@@ -328,6 +331,7 @@ class VoronoiMapping(object):
             y2 = min(max(y2, 0), h_max)
             vertices[i][3] = x2, y2
 
+    def add_missing_polygon_points(self, vertices, w_max, h_max, new_vertices):
         region_verts_i = []
         for i, item in enumerate(vertices):
             if item[1] is None:
