@@ -1,185 +1,52 @@
 """Distopia utilities
 =======================
 """
-import math
+
+__all__ = ('compute_affine_transform', )
+
+import numpy as np
 
 
-class PolygonCollider(object):
-    ''' Collide2DPoly checks whether a point is within a polygon defined by a
-    list of corner points.
+def compute_affine_transform(fixed, moving):
+    '''Compute the affine transform by point set registration.
+    The affine transform is the composition of a translation and a linear map.
+    The two ordered lists of points must be of the same length larger or equal to 3.
+    The order of the points in the two list must match.
 
-    Based on http://alienryderflex.com/polygon/
+    The 2D affine transform :math:`\mathbf{A}` has 6 parameters (2 for the translation and 4 for the linear transform).
+    The best estimate of :math:`\mathbf{A}` can be computed using at least 3 pairs of matching points. Adding more
+    pair of points will improve the quality of the estimate. The matching pairs are usually obtained by selecting
+    unique features in both images and measuring their coordinates.
+    :param list fixed: a list of the reference points.
+    :param list moving: a list of the moving points to register on the fixed point.
+    :returns translation, linear_map: the computed translation and linear map affine transform.
 
-    For example, a simple triangle::
-
-        >>> collider = PolygonCollider([10., 10., 20., 30., 30., 10.],
-        ... cache=True)
-        >>> (0.0, 0.0) in collider
-        False
-        >>> (20.0, 20.0) in collider
-        True
-
-    The constructor takes a list of x,y points in the form of [x1,y1,x2,y2...]
-    as the points argument. These points define the corners of the
-    polygon. The boundary is linearly interpolated between each set of points.
-    The x, and y values must be floating points.
-    The cache argument, if True, will calculate membership for all the points
-    so when collide_point is called it'll just be a table lookup.
+    Based on ``pymicro.view.vol_utils.compute_affine_transform``
     '''
+    assert len(fixed) == len(moving)
+    assert len(fixed) >= 3
 
-    points = []
-    cconstant = []
-    cmultiple = []
-    cspace = None
+    fixed_centroid = np.average(fixed, 0)
+    moving_centroid = np.average(moving, 0)
 
-    min_x = 0
-    max_x = 0
-    min_y = 0
-    max_y = 0
-    width = 0
-    count = 0
+    # offset every point by the center of mass of all the points in the set
+    fixed_from_centroid = fixed - fixed_centroid
+    moving_from_centroid = moving - moving_centroid
+    covariance = moving_from_centroid.T.dot(fixed_from_centroid)
+    variance = moving_from_centroid.T.dot(moving_from_centroid)
 
-    def __init__(self, points, cache=False, **kwargs):
-        super(PolygonCollider, self).__init__(**kwargs)
-        length = len(points)
-        if length % 2:
-            raise IndexError('Odd number of points provided')
-        if length < 6:
-            self.points = []
-            return
+    # compute the full affine transform: translation + linear map
+    linear_map = np.linalg.inv(variance).dot(covariance).T
+    translation = fixed_centroid - linear_map.dot(moving_centroid)
 
-        self.count = count = length // 2
-        points = self.points = list(map(float, points))
-        cconstant = self.cconstant = [0, ] * count
-        cmultiple = self.cmultiple = [0, ] * count
+    invt = np.linalg.inv(linear_map)
+    rotation_scale = np.zeros((3, 3))
+    rotation_scale[0:2, 0:2] = invt
+    rotation_scale[2, 2] = 1
 
-        self.min_x = min(points[0::2])
-        self.max_x = max(points[0::2])
-        self.min_y = min(points[1::2])
-        self.max_y = max(points[1::2])
+    trans = np.eye(3)
+    trans[:2, 2] = -np.dot(invt, translation)
+    mat = np.dot(trans, rotation_scale)
 
-        min_x = math.floor(self.min_x)
-        min_y = math.floor(self.min_y)
-
-        j = count - 1
-
-        if cache:
-            for i in range(count):
-                points[2 * i] -= min_x
-                points[2 * i + 1] -= min_y
-
-        for i in range(count):
-            i_x = i * 2
-            i_y = i_x + 1
-            j_x = j * 2
-            j_y = j_x + 1
-            if points[j_y] == points[i_y]:
-                cconstant[i] = points[i_x]
-                cmultiple[i] = 0.
-            else:
-                cconstant[i] = (
-                    points[i_x] - points[i_y] * points[j_x] /
-                    (points[j_y] - points[i_y]) +
-                    points[i_y] * points[i_x] /
-                    (points[j_y] - points[i_y]))
-
-                cmultiple[i] = (
-                    (points[j_x] - points[i_x]) / (points[j_y] - points[i_y]))
-            j = i
-
-        if cache:
-            width = int(math.ceil(self.max_x) - min_x + 1.)
-            self.width = width
-
-            height = int(math.ceil(self.max_y) - min_y + 1.)
-            self.cspace = [0] * (height * width)
-
-            for y in range(height):
-                for x in range(width):
-                    j = count - 1
-                    odd = 0
-                    for i in range(count):
-                        i_y = i * 2 + 1
-                        j_y = j * 2 + 1
-                        if (points[i_y] < y <= points[j_y] or
-                                points[j_y] < y <= points[i_y]):
-                            odd ^= y * cmultiple[i] + cconstant[i] < x
-                        j = i
-                    self.cspace[y * width + x] = odd
-
-    def collide_point(self, x, y):
-        points = self.points
-        if not points or not (
-                self.min_x <= x <= self.max_x and
-                self.min_y <= y <= self.max_y):
-            return False
-
-        if self.cspace is not None:
-            y -= math.floor(self.min_y)
-            x -= math.floor(self.min_x)
-            return self.cspace[int(y) * self.width + int(x)]
-
-        j = self.count - 1
-        odd = 0
-        for i in range(self.count):
-            i_y = i * 2 + 1
-            j_y = j * 2 + 1
-            if (points[i_y] < y <= points[j_y] or
-                    points[j_y] < y <= points[i_y]):
-                odd ^= y * self.cmultiple[i] + self.cconstant[i] < x
-            j = i
-        return odd
-
-    def __contains__(self, point):
-        return self.collide_point(*point)
-
-    def get_inside_points(self):
-        '''Returns a list of all the points that are within the polygon.
-        '''
-        points = []
-
-        for x in range(
-                int(math.floor(self.min_x)), int(math.ceil(self.max_x)) + 1):
-            for y in range(
-                    int(math.floor(self.min_y)),
-                    int(math.ceil(self.max_y)) + 1):
-                if self.collide_point(x, y):
-                    points.append((x, y))
-        return points
-
-    def bounding_box(self):
-        '''Returns the bounding box containing the polygon as 4 points
-        (x1, y1, x2, y2), where x1, y1 is the lower left and x2, y2 is the
-        upper right point of the rectangle.
-        '''
-        return (int(math.floor(self.min_x)), int(math.floor(self.min_y)),
-                int(math.ceil(self.max_x)), int(math.ceil(self.max_y)))
-
-    def get_area(self):
-        count = 0.
-
-        for x in range(
-                int(math.floor(self.min_x)), int(math.ceil(self.max_x)) + 1):
-            for y in range(
-                    int(math.floor(self.min_y)),
-                    int(math.ceil(self.max_y)) + 1):
-                if self.collide_point(x, y):
-                    count += 1
-        return count
-
-    def get_centroid(self):
-        x = y = 0.
-
-        if not self.points:
-            return 0, 0
-
-        for i in range(self.count):
-            x += self.points[2 * i]
-            y += self.points[2 * i + 1]
-
-        x = x / float(self.count)
-        y = y / float(self.count)
-
-        if self.cspace:
-            return x + self.min_x, y + self.min_y
-        return x, y
+    # A multiplies fixed to get moving
+    return mat

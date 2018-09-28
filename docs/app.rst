@@ -1,4 +1,4 @@
-Mapping
+Apps
 ========
 
 .. automodule:: distopia.app

@@ -13,9 +13,13 @@ from kivy.app import App
 from kivy.lang import Builder
 from kivy.properties import NumericProperty, ObjectProperty
 from kivy.clock import Clock
+from kivy.graphics import Color, Line
+from kivy.metrics import dp
 
+import numpy as np
 import os
 import distopia
+from distopia.utils import compute_affine_transform
 
 
 __all__ = ('AlignmentPointWidget', 'TouchWidget', 'AlignmentApp')
@@ -74,6 +78,8 @@ class TouchWidget(Widget):
 
     last_touch = None
 
+    trans_mat = None
+
     def __init__(self, **kwargs):
         super(TouchWidget, self).__init__(**kwargs)
         self.touch_pos = []
@@ -99,6 +105,12 @@ class TouchWidget(Widget):
             self.remove_widget(self.align_widget)
             self.align_widget = None
 
+            points = np.array(self.touch_pos)
+            screen_points = points[:, 0:2]
+            touch_points = points[:, 2:4]
+            self.trans_mat = compute_affine_transform(
+                touch_points, screen_points)
+
     def on_touch_down(self, touch):
         if super(TouchWidget, self).on_touch_down(touch):
             return True
@@ -111,24 +123,45 @@ class TouchWidget(Widget):
             self.last_pos = touch.pos
             self.last_touch = touch
             self.callback_trigger()
+        else:
+            pos = np.ones((3, ))
+            pos[:2] = touch.pos
+            x, y = np.dot(self.trans_mat, pos)[:2]
+            with self.canvas:
+                touch.ud['circle'] = Line(circle=(x, y, dp(25)))
+
         return True
 
     def on_touch_move(self, touch):
-        if 'alignment' not in touch.ud:
-            return True
+        if self.align_widget is not None:
+            if 'alignment' not in touch.ud:
+                return True
 
-        self.callback_trigger.cancel()
-        self.last_pos = touch.pos
-        self.callback_trigger()
+            self.callback_trigger.cancel()
+            self.last_pos = touch.pos
+            self.callback_trigger()
+        else:
+            if 'circle' not in touch.ud:
+                return True
+
+            pos = np.ones((3, ))
+            pos[:2] = touch.pos
+            x, y = np.dot(self.trans_mat, pos)[:2]
+            touch.ud['circle'].circle = x, y, dp(25)
         return True
 
     def on_touch_up(self, touch):
-        if 'alignment' not in touch.ud:
-            return True
+        if self.align_widget is not None:
+            if 'alignment' not in touch.ud:
+                return True
 
-        self.last_pos = None
-        self.last_touch = None
-        self.callback_trigger.cancel()
+            self.last_pos = None
+            self.last_touch = None
+            self.callback_trigger.cancel()
+        else:
+            if 'circle' not in touch.ud:
+                return True
+            self.canvas.remove(touch.ud['circle'])
         return True
 
 
@@ -147,9 +180,12 @@ if __name__ == "__main__":
     app = AlignmentApp()
     app.run()
 
-    fname = data_path = os.path.join(
+    fname = os.path.join(
         os.path.dirname(distopia.__file__), 'data', 'alignment.txt')
     with open(fname, 'w') as fh:
         for touch in app.root_widget.touch_pos:
             fh.write(','.join(map(str, touch)))
+            fh.write('\n')
+        for row in app.root_widget.trans_mat:
+            fh.write(','.join(map(str, row)))
             fh.write('\n')

@@ -6,7 +6,9 @@ Runs the voronoi GUI app.
 """
 from itertools import cycle
 import logging
+import os
 import cProfile, pstats, io
+import numpy as np
 
 from kivy.uix.widget import Widget
 from kivy.app import App
@@ -15,6 +17,7 @@ from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
 from kivy.graphics import Color
 from matplotlib import colors as mcolors
 
+import distopia
 from distopia.app.geo_data import GeoData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
@@ -40,13 +43,16 @@ class VoronoiWidget(Widget):
 
     _profiler = None
 
+    align_mat = None
+
     def __init__(self, voronoi_mapping=None, max_districts=0, table_mode=False,
-                 **kwargs):
+                 align_mat=None, **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
         self.fiducial_graphics = {}
         self.max_districts = max_districts
         self.table_mode = table_mode
+        self.align_mat = align_mat
 
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
@@ -80,6 +86,11 @@ class VoronoiWidget(Widget):
             return True
 
     def touch_mode_handle_up(self, pos):
+
+        if self.align_mat is not None:
+            pos = tuple(
+                np.dot(self.align_mat, np.array([pos[0], pos[1], 1]))[:2])
+
         x, y = pos
         for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
             if ((x - x2) ** 2 + (y - y2) ** 2) ** .5 < 5:
@@ -153,6 +164,8 @@ class VoronoiApp(App):
 
     _profiler = None
 
+    alignment_filename = 'alignment.txt'
+
     def create_voronoi(self):
         """Loads and initializes all the data and voronoi mapping.
         """
@@ -180,11 +193,18 @@ class VoronoiApp(App):
     def build(self):
         """Builds the GUI.
         """
+        mat = None
+        if self.alignment_filename:
+            fname = os.path.join(
+                os.path.dirname(distopia.__file__), 'data',
+                self.alignment_filename)
+            mat = np.loadtxt(fname, delimiter=',', skiprows=3)
+
         self.create_voronoi()
         widget = VoronoiWidget(
             voronoi_mapping=self.voronoi_mapping,
             max_districts=self.max_districts,
-            table_mode=self.table_mode)
+            table_mode=self.table_mode, align_mat=mat)
         self._profiler = widget._profiler = cProfile.Profile()
         return widget
 
