@@ -16,7 +16,7 @@
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Mapping" href="app.html" />
+    <link rel="prev" title="Apps" href="app.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -37,41 +37,21 @@
 <span id="utilities"></span><h1>Utilities<a class="headerlink" href="#module-distopia.utils" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="distopia-utilities">
 <h2>Distopia utilities<a class="headerlink" href="#distopia-utilities" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="distopia.utils.PolygonCollider">
-<em class="property">class </em><code class="descclassname">distopia.utils.</code><code class="descname">PolygonCollider</code><span class="sig-paren">(</span><em>points</em>, <em>cache=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/utils.html#PolygonCollider"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.utils.PolygonCollider" title="Permalink to this definition">¶</a></dt>
-<dd><p>Collide2DPoly checks whether a point is within a polygon defined by a
-list of corner points.</p>
-<p>Based on <a class="reference external" href="http://alienryderflex.com/polygon/">http://alienryderflex.com/polygon/</a></p>
-<p>For example, a simple triangle:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">([</span><span class="mf">10.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">,</span> <span class="mf">20.</span><span class="p">,</span> <span class="mf">30.</span><span class="p">,</span> <span class="mf">30.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">],</span>
-<span class="gp">... </span><span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="ow">in</span> <span class="n">collider</span>
-<span class="go">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)</span> <span class="ow">in</span> <span class="n">collider</span>
-<span class="go">True</span>
-</pre></div>
-</div>
-<p>The constructor takes a list of x,y points in the form of [x1,y1,x2,y2…]
-as the points argument. These points define the corners of the
-polygon. The boundary is linearly interpolated between each set of points.
-The x, and y values must be floating points.
-The cache argument, if True, will calculate membership for all the points
-so when collide_point is called it’ll just be a table lookup.</p>
-<dl class="method">
-<dt id="distopia.utils.PolygonCollider.bounding_box">
-<code class="descname">bounding_box</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/utils.html#PolygonCollider.bounding_box"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.utils.PolygonCollider.bounding_box" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the bounding box containing the polygon as 4 points
-(x1, y1, x2, y2), where x1, y1 is the lower left and x2, y2 is the
-upper right point of the rectangle.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="distopia.utils.PolygonCollider.get_inside_points">
-<code class="descname">get_inside_points</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/utils.html#PolygonCollider.get_inside_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.utils.PolygonCollider.get_inside_points" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a list of all the points that are within the polygon.</p>
-</dd></dl>
-
+<dl class="function">
+<dt id="distopia.utils.compute_affine_transform">
+<code class="descclassname">distopia.utils.</code><code class="descname">compute_affine_transform</code><span class="sig-paren">(</span><em>fixed</em>, <em>moving</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/utils.html#compute_affine_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.utils.compute_affine_transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the affine transform by point set registration.
+The affine transform is the composition of a translation and a linear map.
+The two ordered lists of points must be of the same length larger or equal to 3.
+The order of the points in the two list must match.</p>
+<p>The 2D affine transform <span class="math notranslate nohighlight">\(\mathbf{A}\)</span> has 6 parameters (2 for the translation and 4 for the linear transform).
+The best estimate of <span class="math notranslate nohighlight">\(\mathbf{A}\)</span> can be computed using at least 3 pairs of matching points. Adding more
+pair of points will improve the quality of the estimate. The matching pairs are usually obtained by selecting
+unique features in both images and measuring their coordinates.
+:param list fixed: a list of the reference points.
+:param list moving: a list of the moving points to register on the fixed point.
+:returns translation, linear_map: the computed translation and linear map affine transform.</p>
+<p>Based on <code class="docutils literal notranslate"><span class="pre">pymicro.view.vol_utils.compute_affine_transform</span></code></p>
 </dd></dl>
 
 </div>
@@ -100,7 +80,7 @@ upper right point of the rectangle.</p>
 <li class="toctree-l1"><a class="reference internal" href="precinct.html">Precinct</a></li>
 <li class="toctree-l1"><a class="reference internal" href="district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
-<li class="toctree-l1"><a class="reference internal" href="app.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app.html">Apps</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Utilities</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#distopia-utilities">Distopia utilities</a></li>
 </ul>
@@ -111,7 +91,7 @@ upper right point of the rectangle.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="app.html" title="previous chapter">Mapping</a></li>
+      <li>Previous: <a href="app.html" title="previous chapter">Apps</a></li>
   </ul></li>
 </ul>
 </div>
