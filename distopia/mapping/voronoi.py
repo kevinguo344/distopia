@@ -153,11 +153,8 @@ class VoronoiMapping(object):
         associated districts.
         """
         fiducials = np.asarray(list(self.fiducial_locations.values()))
-        t0 = time.clock()
         vor = Voronoi(fiducials)
-        print('voro', time.clock() - t0)
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
-        print('voro_full', time.clock() - t0)
 
         assert len(regions) <= 2 ** 8 - 2
         w, h = self.screen_size
@@ -178,8 +175,6 @@ class VoronoiMapping(object):
 
             districts.append(district)
             colliders.append(collider)
-
-        print('district_assign', time.clock() - t0)
 
     def voronoi_finite_polygons_2d(self, vor):
         """

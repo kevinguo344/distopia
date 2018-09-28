@@ -53,6 +53,7 @@ class VoronoiWidget(Widget):
         self.max_districts = max_districts
         self.table_mode = table_mode
         self.align_mat = align_mat
+        self.district_graphics = []
 
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
@@ -86,7 +87,6 @@ class VoronoiWidget(Widget):
             return True
 
     def touch_mode_handle_up(self, pos):
-
         if self.align_mat is not None:
             pos = tuple(
                 np.dot(self.align_mat, np.array([pos[0], pos[1], 1]))[:2])
@@ -111,30 +111,30 @@ class VoronoiWidget(Widget):
             self.fiducial_graphics[key] = color, point
         return True
 
+    def clear_voronoi(self):
+        for district in self.voronoi_mapping.districts:
+            for precinct in district.precincts:
+                self.precinct_graphics[precinct][0].rgba = (0, 0, 0, 1)
+
+        for item in self.district_graphics:
+            self.canvas.remove(item)
+        self.district_graphics = []
+
     def recompute_voronoi(self):
         if len(self.voronoi_mapping.get_fiducials()) <= 3:
-            for district in self.voronoi_mapping.districts:
-                for precinct in district.precincts:
-                    self.precinct_graphics[precinct][0].rgba = (0, 0, 0, 1)
+            self.clear_voronoi()
             return
 
-        import time
-        t0 = time.clock()
-        print('initialo')
         self._profiler.enable()
         try:
             self.voronoi_mapping.compute_district_pixels()
         except Exception as e:
             logging.exception(e)
-            for district in self.voronoi_mapping.districts:
-                for precinct in district.precincts:
-                    self.precinct_graphics[precinct][0].rgba = (0, 0, 0, 1)
+            self.clear_voronoi()
             self._profiler.disable()
             return
 
-        print('init2', time.clock() - t0)
         self.voronoi_mapping.assign_precincts_to_districts()
-        print('init3', time.clock() - t0)
         self._profiler.disable()
 
         colors = [
@@ -142,6 +142,12 @@ class VoronoiWidget(Widget):
         for color, district in zip(cycle(colors), self.voronoi_mapping.districts):
             for precinct in district.precincts:
                 self.precinct_graphics[precinct][0].rgb = color
+
+        with self.canvas:
+            self.district_graphics.append(Color(1, 1, 0, 1))
+            for district in self.voronoi_mapping.districts:
+                self.district_graphics.append(
+                    Line(points=district.boundary, width=3))
 
 
 class VoronoiApp(App):
