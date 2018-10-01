@@ -33,7 +33,13 @@ def mpl_plot_data(geo_data):
 if __name__ == '__main__':
     from distopia.app.geo_data import GeoData
     geo_data = GeoData()
-    geo_data.dataset_name = 'WI_Election_Data_with_2017_Wards'
+    geo_data.dataset_name = 'WI_Municipal_Wards_Fall_2016'
     geo_data.load_data()
+
     geo_data.generate_polygons()
-    mpl_plot_data(geo_data)
+    geo_data.scale_to_screen()
+    geo_data.smooth_vertices()
+
+    geo_data.dump_data_to_disk()
+
+    # mpl_plot_data(geo_data)

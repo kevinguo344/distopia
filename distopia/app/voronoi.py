@@ -176,15 +176,20 @@ class VoronoiApp(App):
         """Loads and initializes all the data and voronoi mapping.
         """
         self.geo_data = geo_data = GeoData()
-        if self.use_county_dataset:
+        if self.use_county_dataset and False:
             geo_data.dataset_name = 'County_Boundaries_24K'
         else:
             geo_data.dataset_name = 'WI_Election_Data_with_2017_Wards'
-        geo_data.screen_size = self.screen_size
+            geo_data.source_coordinates = ''
 
-        geo_data.load_data()
-        geo_data.generate_polygons()
-        geo_data.scale_to_screen()
+        geo_data.screen_size = self.screen_size
+        try:
+            geo_data.load_npz_data()
+        except FileNotFoundError:
+            geo_data.load_data()
+            geo_data.generate_polygons()
+            geo_data.scale_to_screen()
+            geo_data.smooth_vertices()
 
         self.voronoi_mapping = vor = VoronoiMapping()
         self.precincts = precincts = []

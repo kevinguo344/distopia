@@ -7,3 +7,8 @@
 .cache
 build
 docs/_build
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
