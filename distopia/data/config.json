@@ -1,0 +1,14 @@
+{
+  "alignment_filename": "alignment.txt",
+  "max_districts": 8,
+  "screen_offset": [
+    0,
+    0
+  ],
+  "screen_size": [
+    1920,
+    1080
+  ],
+  "table_mode": true,
+  "use_county_dataset": true
+}

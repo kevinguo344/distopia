@@ -38,6 +38,8 @@ class District(object):
     contains the summery metric data for this district.
     """
 
+    collider = None
+
     def __init__(self, **kwargs):
         super(District, self).__init__(**kwargs)
         self.clear()

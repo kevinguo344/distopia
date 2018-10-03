@@ -137,6 +137,11 @@ class TouchWidget(Widget):
             if 'alignment' not in touch.ud:
                 return True
 
+            x0, y0 = touch.pos
+            x1, y1 = self.last_pos
+            if np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2) <= 1:
+                return True
+
             self.callback_trigger.cancel()
             self.last_pos = touch.pos
             self.callback_trigger()

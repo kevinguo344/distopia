@@ -27,6 +27,6 @@ setup(
         "distopia.mapping._voronoi", ["distopia/mapping/_voronoi.pyx"],
         include_dirs=[np.get_include()])]),
     install_requires=['pytest', 'scipy', 'pyshp', 'numpy', 'pyproj', 'oscpy',
-                      'matplotlib', 'Cython'],
+                      'matplotlib', 'Cython', 'roslibpy'],
     package_data={'distopia': ['data/*', ]},
 )
