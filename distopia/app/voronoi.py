@@ -207,11 +207,16 @@ class VoronoiWidget(Widget):
             for precinct in district.precincts:
                 self.precinct_graphics[precinct][0].rgb = color
 
-        # with self.canvas:
-        #     self.district_graphics.append(Color(1, 1, 0, 1))
-        #     for district in self.voronoi_mapping.districts:
-        #         self.district_graphics.append(
-        #             Line(points=district.boundary, width=3))
+        for item in self.district_graphics:
+            self.canvas.remove(item)
+        self.district_graphics = []
+
+        with self.canvas:
+            self.district_graphics.append(Color(1, 1, 0, 1))
+            for district in self.voronoi_mapping.districts:
+                self.district_graphics.append(
+                    Line(points=district.boundary + district.boundary[:2],
+                         width=2))
 
 
 class VoronoiApp(App):
