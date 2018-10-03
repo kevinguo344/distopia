@@ -64,23 +64,16 @@
 
 <dl class="method">
 <dt id="distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts">
-<code class="descname">assign_precincts_to_districts</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.assign_precincts_to_districts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts" title="Permalink to this definition">¶</a></dt>
+<code class="descname">assign_precincts_to_districts</code><span class="sig-paren">(</span><em>districts</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.assign_precincts_to_districts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Uses the pre-computed precinct and district maps and assigns
 all the precincts to districts.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels">
-<code class="descname">compute_district_pixels</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.compute_district_pixels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels" title="Permalink to this definition">¶</a></dt>
+<code class="descname">compute_district_pixels</code><span class="sig-paren">(</span><em>fiducials=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.compute_district_pixels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels" title="Permalink to this definition">¶</a></dt>
 <dd><p>Computes the assignment of pixels to districts and creates the
 associated districts.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="distopia.mapping.voronoi.VoronoiMapping.district_colliders">
-<code class="descname">district_colliders</code><em class="property"> = []</em><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.district_colliders" title="Permalink to this definition">¶</a></dt>
-<dd><p>A list of <code class="xref py py-class docutils literal notranslate"><span class="pre">PolygonCollider</span></code>, each corresponding
-to a district in <a class="reference internal" href="#distopia.mapping.voronoi.VoronoiMapping.districts" title="distopia.mapping.voronoi.VoronoiMapping.districts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">districts</span></code></a>.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -124,7 +117,7 @@ fiducial at that key.</p>
 <dt id="distopia.mapping.voronoi.VoronoiMapping.pixel_district_map">
 <code class="descname">pixel_district_map</code><em class="property"> = None</em><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.pixel_district_map" title="Permalink to this definition">¶</a></dt>
 <dd><p>A width by height matrix, where each item is the district index in
-<a class="reference internal" href="#distopia.mapping.voronoi.VoronoiMapping.districts" title="distopia.mapping.voronoi.VoronoiMapping.districts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">districts</span></code></a> it belongs to.</p>
+<a class="reference internal" href="#distopia.mapping.voronoi.VoronoiMapping.districts" title="distopia.mapping.voronoi.VoronoiMapping.districts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">districts</span></code></a> it belongs to. Read_only (used by the thread).</p>
 </dd></dl>
 
 <dl class="attribute">
