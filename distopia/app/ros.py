@@ -13,9 +13,9 @@ class RosBridge:
     """
 
     def __init__(self,host="localhost",port=9090):
-        print("Attempting to connect to rosbridge at:{}:{}...".format(host,port) 
+        print("Attempting to connect to rosbridge at:{}:{}...".format(host,port))
         self.ros = roslibpy.Ros(host=host,port=port)
-        self.ros.on_ready(lambda: print('Is ROS connected?', self.ros.is_connected)
+        self.ros.on_ready(lambda: print('Is ROS connected?', self.ros.is_connected))
         time.sleep(10) #for now, just wait 10 seconds to see if it connects
         print("Shutting down")
 
