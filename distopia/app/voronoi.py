@@ -10,14 +10,14 @@ import os
 import cProfile, pstats, io
 import numpy as np
 import json
-from functools import partial
+from functools import cmp_to_key
 
 from kivy.uix.widget import Widget
 from kivy.app import App
 from kivy.graphics.vertex_instructions import Line, Point, Mesh
 from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
 from kivy.graphics import Color
-from matplotlib import colors as mcolors
+import matplotlib.pyplot as plt
 from kivy.clock import Clock
 from kivy.graphics.context_instructions import \
     PushMatrix, PopMatrix, Rotate, Translate, Scale, MatrixInstruction
@@ -44,6 +44,12 @@ class VoronoiWidget(Widget):
 
     max_districts = 0
 
+    colors = []
+
+    fiducials_color = {}
+
+    last_fiducials_pos_color = []
+
     table_mode = False
 
     _profiler = None
@@ -58,8 +64,13 @@ class VoronoiWidget(Widget):
                  align_mat=None, screen_offset=(0, 0), **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
+
         self.fiducial_graphics = {}
+        self.fiducials_color = {}
+        self.last_fiducials_pos_color = []
         self.max_districts = max_districts
+        self.colors = cycle(plt.get_cmap('tab10').colors)
+
         self.table_mode = table_mode
         self.align_mat = align_mat
         self.district_graphics = []
@@ -96,6 +107,33 @@ class VoronoiWidget(Widget):
                     Line(points=precinct.boundary, width=1))
                 precinct_graphics[precinct] = graphics
 
+    def add_fiducial(self, location):
+        fiducial = self.voronoi_mapping.add_fiducial(location)
+
+        if not self.last_fiducials_pos_color:
+            self.fiducials_color[fiducial] = next(self.colors)
+            return fiducial
+
+        if len(self.last_fiducials_pos_color) == 1:
+            self.fiducials_color[fiducial] = self.last_fiducials_pos_color[0][1]
+            del self.last_fiducials_pos_color[0]
+            return fiducial
+
+        pos = np.array([item[0] for item in self.last_fiducials_pos_color])
+        location = np.array(location)
+        i = np.argmin(np.sqrt(np.sum((location - pos) ** 2, axis=1)))
+
+        self.fiducials_color[fiducial] = self.last_fiducials_pos_color[i][1]
+        del self.last_fiducials_pos_color[i]
+
+        return fiducial
+
+    def remove_fiducial(self, fiducial, location):
+        self.voronoi_mapping.remove_fiducial(fiducial)
+
+        color = self.fiducials_color.pop(fiducial)
+        self.last_fiducials_pos_color.append((location, color))
+
     def on_touch_down(self, touch):
         if not self.table_mode:
             return False
@@ -104,7 +142,7 @@ class VoronoiWidget(Widget):
             return False
 
         pos = self.align_touch(touch.pos)
-        key = self.voronoi_mapping.add_fiducial(pos)
+        key = self.add_fiducial(pos)
 
         with self.canvas:
             color = Color(rgba=(1, 1, 1, 1))
@@ -143,7 +181,8 @@ class VoronoiWidget(Widget):
             self.canvas.remove(info['graphics'][0])
             self.canvas.remove(info['graphics'][1])
 
-            self.voronoi_mapping.remove_fiducial(info['fiducial_key'])
+            self.remove_fiducial(
+                info['fiducial_key'], self.align_touch(touch.pos))
             self.voronoi_mapping.request_reassignment(self.voronoi_callback)
         else:
             if not self.touch_mode_handle_up(touch.pos):
@@ -163,9 +202,10 @@ class VoronoiWidget(Widget):
 
     def touch_mode_handle_up(self, pos):
         x, y = pos = self.align_touch(pos)
+
         for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
             if ((x - x2) ** 2 + (y - y2) ** 2) ** .5 < 5:
-                self.voronoi_mapping.remove_fiducial(key)
+                self.remove_fiducial(key, pos)
 
                 for item in self.fiducial_graphics.pop(key):
                     self.canvas.remove(item)
@@ -174,7 +214,7 @@ class VoronoiWidget(Widget):
         if len(self.voronoi_mapping.get_fiducials()) == self.max_districts:
             return False
 
-        key = self.voronoi_mapping.add_fiducial(pos)
+        key = self.add_fiducial(pos)
 
         with self.canvas:
             color = Color(rgba=(1, 1, 1, 1))
@@ -196,14 +236,23 @@ class VoronoiWidget(Widget):
             self.canvas.remove(item)
         self.district_graphics = []
 
-    def recompute_voronoi(self, districts, data_is_old=False):
+    def recompute_voronoi(
+            self, districts, post_callback=None, largs=(), data_is_old=False):
+        if data_is_old:
+            return
+
+        if post_callback is not None:
+            post_callback(*largs)
         if not districts:
             self.clear_voronoi()
             return
 
-        colors = [
-            mcolors.BASE_COLORS[c] for c in ('r', 'c', 'g', 'y', 'm', 'b')]
-        for color, district in zip(cycle(colors), districts):
+        voronoi = self.voronoi_mapping
+        colors = self.fiducials_color
+        for fiducial in voronoi.get_fiducials():
+            district = voronoi.get_fiducial_district(fiducial)
+            color = colors[fiducial]
+
             for precinct in district.precincts:
                 self.precinct_graphics[precinct][0].rgb = color
 

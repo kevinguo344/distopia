@@ -54,6 +54,16 @@ class District(object):
         self.precincts = []
         self.metrics = {}
 
+    def assign_precincts(self, precincts):
+        """Adds the precincts to the district.
+
+        :param precincts: Iterable of :class:`~distopia.precinct.Precinct`
+            instances.
+        """
+        self.precincts = list(precincts)
+        for precinct in precincts:
+            precinct.district = self
+
     def add_precinct(self, precinct):
         """Adds a precinct to the district.
 
