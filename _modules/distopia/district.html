@@ -89,6 +89,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span> <span class="o">=</span> <span class="p">{}</span></div>
 
+<div class="viewcode-block" id="District.assign_precincts"><a class="viewcode-back" href="../../district.html#distopia.district.District.assign_precincts">[docs]</a>    <span class="k">def</span> <span class="nf">assign_precincts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precincts</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds the precincts to the district.</span>
+
+<span class="sd">        :param precincts: Iterable of :class:`~distopia.precinct.Precinct`</span>
+<span class="sd">            instances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">precincts</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">precinct</span> <span class="ow">in</span> <span class="n">precincts</span><span class="p">:</span>
+            <span class="n">precinct</span><span class="o">.</span><span class="n">district</span> <span class="o">=</span> <span class="bp">self</span></div>
+
 <div class="viewcode-block" id="District.add_precinct"><a class="viewcode-back" href="../../district.html#distopia.district.District.add_precinct">[docs]</a>    <span class="k">def</span> <span class="nf">add_precinct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precinct</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Adds a precinct to the district.</span>
 
