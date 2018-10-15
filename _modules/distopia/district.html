@@ -52,6 +52,9 @@
     <span class="sd">&quot;&quot;&quot;A globally unique name (or number) describing the district.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">identity</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="sd">&quot;&quot;&quot;The id of the district. &quot;&quot;&quot;</span>
+
     <span class="n">boundary</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="sd">&quot;&quot;&quot;A list of the ``x``, ``y`` coordinates of the polygon that </span>
 <span class="sd">    describes the district&#39;s boundary.</span>
@@ -105,7 +108,10 @@
 <span class="sd">        :param precinct: :class:`~distopia.precinct.Precinct` instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">precinct</span><span class="o">.</span><span class="n">district</span> <span class="o">=</span> <span class="bp">self</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precinct</span><span class="p">)</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precinct</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">compute_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">11</span><span class="p">]}]</span></div>
 </pre></div>
 
           </div>
