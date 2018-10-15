@@ -51,6 +51,8 @@ class VoronoiMapping(object):
     fiducial at that key.
     """
 
+    fiducial_ids = {}
+
     pixel_district_map = None
     """A width by height matrix, where each item is the district index in
     :attr:`districts` it belongs to. Read_only (used by the thread).
@@ -68,6 +70,8 @@ class VoronoiMapping(object):
 
     thread_lock = None
 
+    _raw_districts = []
+
     def __init__(self, **kwargs):
         super(VoronoiMapping, self).__init__(**kwargs)
         self._profiler = cProfile.Profile()
@@ -76,6 +80,7 @@ class VoronoiMapping(object):
         self.districts = []
         self.precinct_colliders = []
         self.fiducial_locations = {}
+        self.fiducial_ids = {}
         self.thread_lock = Lock()
         self._thread_queue = Queue()
         self._thread = thread = Thread(
@@ -83,8 +88,10 @@ class VoronoiMapping(object):
         thread.start()
 
     def post_thread_computation_callback(
-            self, districts, precinct_assignment, pixel_district_map):
+            self, districts, raw_districts, precinct_assignment,
+            pixel_district_map):
         self.districts = districts
+        self._raw_districts = raw_districts
         self.pixel_district_map = pixel_district_map
         for district, precincts in zip(districts, precinct_assignment):
             district.assign_precincts(precincts)
@@ -109,28 +116,36 @@ class VoronoiMapping(object):
                     pass
                 return
 
-            callback, callback_if_old, fiducials = item
+            callback, callback_if_old, fiducials, fiducial_ids = item
             if fiducials is None:
-                fiducials = np.asarray(list(self.fiducial_locations.values()))
-            if fiducials.shape[0] <= 3:
-                callback([])
+                with lock:
+                    fiducials = dict(self.fiducial_locations)
+                    fiducial_ids = self.fiducial_ids
+
+            if len(fiducials) <= 3:
+                callback([], [], [])
                 continue
+
+            fiducial_keys = list(fiducials.keys())
+            fiducial_pos = [fiducials[key] for key in fiducial_keys]
+            fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
 
             self._profiler.enable()
             try:
-                districts, pixel_district_map = self.compute_district_pixels(
-                    fiducials)
+                districts, raw_districts, pixel_district_map = \
+                    self.compute_district_pixels(
+                        np.asarray(fiducial_pos), fiducial_identity)
                 if not callback_if_old and queue.qsize():
                     self._profiler.disable()
                     continue
 
                 with lock:
                     precinct_assignment = self.assign_precincts_to_districts(
-                        districts, pixel_district_map)
+                        raw_districts, pixel_district_map)
             except Exception as e:
                 self._profiler.disable()
                 logging.exception(e)
-                callback([])
+                callback([], [], [])
                 continue
 
             qsize = queue.qsize()
@@ -138,8 +153,9 @@ class VoronoiMapping(object):
                 self._profiler.disable()
                 continue
 
-            callback(districts, post_callback,
-                     (districts, precinct_assignment, pixel_district_map),
+            callback(districts, fiducial_identity, fiducial_pos, post_callback,
+                     (districts, raw_districts, precinct_assignment,
+                      pixel_district_map),
                      bool(qsize))
             self._profiler.disable()
 
@@ -153,10 +169,13 @@ class VoronoiMapping(object):
         if ignore_if_scheduled and self._thread_queue.qsize():
             return
 
-        fiducials = None
+        fiducials = fiducial_ids = None
         if current_fiducials:
-            fiducials = np.asarray(list(self.fiducial_locations.values()))
-        self._thread_queue.put((callback, callback_if_old, fiducials))
+            fiducials = dict(self.fiducial_locations)
+            fiducial_ids = dict(self.fiducial_ids)
+
+        self._thread_queue.put(
+            (callback, callback_if_old, fiducials, fiducial_ids))
 
     def set_precincts(self, precincts):
         """Adds the precincts to be used by the mapping.
@@ -183,7 +202,7 @@ class VoronoiMapping(object):
                 if 0 <= x < w and 0 <= y < h:
                     precinct_values[x - x1, y - y1] = 1
 
-    def add_fiducial(self, location):
+    def add_fiducial(self, location, identity):
         """Adds a new fiducial at ``location``.
 
         :param location: The fiducial location ``(x, y)``.
@@ -197,7 +216,9 @@ class VoronoiMapping(object):
         x = min(max(x, 0), w - 1)
         y = min(max(y, 0), h - 1)
 
-        self.fiducial_locations[i] = x, y  # queue safe
+        with self.thread_lock:
+            self.fiducial_locations[i] = x, y  # queue safe
+            self.fiducial_ids[i] = identity
         return i
 
     def move_fiducial(self, fiducial, location):
@@ -218,12 +239,17 @@ class VoronoiMapping(object):
 
         :param fiducial: ``fiducial`` ID as returned by :meth:`add_fiducial`.
         """
-        del self.fiducial_locations[fiducial]  # queue safe
+        with self.thread_lock:
+            del self.fiducial_locations[fiducial]
+            del self.fiducial_ids[fiducial]
 
     def get_fiducials(self):
         """Returns a dict of the fiducials, keys are their ID.
         """
         return self.fiducial_locations
+
+    def get_fiducial_ids(self):
+        return self.fiducial_ids
 
     def get_fiducial_district(self, fiducial):
         """The district under the fiducial.
@@ -233,7 +259,7 @@ class VoronoiMapping(object):
         """
         x, y = map(int, self.fiducial_locations[fiducial])
         i = self.pixel_district_map[x, y]
-        return self.districts[i]
+        return self._raw_districts[i]
 
     def assign_precincts_to_districts(self, districts, pixel_district_map):
         """Uses the pre-computed precinct and district maps and assigns
@@ -256,12 +282,10 @@ class VoronoiMapping(object):
             precinct_assignment[district_i].append(precinct)
         return precinct_assignment
 
-    def compute_district_pixels(self, fiducials=None):
+    def compute_district_pixels(self, fiducials, fiducials_identity):
         """Computes the assignment of pixels to districts and creates the
         associated districts.
         """
-        if fiducials is None:
-            fiducials = np.asarray(list(self.fiducial_locations.values()))
         vor = Voronoi(fiducials)
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
 
@@ -269,7 +293,7 @@ class VoronoiMapping(object):
         w, h = self.screen_size
         pixel_district_map = np.ones((w, h), dtype=np.uint8) * (2 ** 8 - 1)
 
-        districts = []
+        raw_districts = districts = []
         for i, region_indices in enumerate(regions):
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
             collider = PolygonCollider(points=poly, cache=True)
@@ -279,10 +303,11 @@ class VoronoiMapping(object):
             district.name = str(i)
             district.boundary = poly
             district.collider = collider
+            district.identity = fiducials_identity[i]
 
             districts.append(district)
 
-        return districts, pixel_district_map
+        return districts, raw_districts, pixel_district_map
 
     def voronoi_finite_polygons_2d(self, vor):
         """

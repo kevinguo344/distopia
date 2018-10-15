@@ -1,6 +1,5 @@
 {
   "alignment_filename": "alignment.txt",
-  "max_districts": 8,
   "screen_offset": [
     0,
     0
@@ -9,6 +8,20 @@
     1920,
     1080
   ],
-  "table_mode": true,
-  "use_county_dataset": true
+  "table_mode": false,
+  "use_county_dataset": true,
+  "district_blocks_fid": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "focus_block_fid": 8,
+  "focus_block_logical_id": 8,
+  "show_precinct_id": false,
+  "use_ros": true
 }

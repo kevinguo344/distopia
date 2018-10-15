@@ -17,6 +17,9 @@ class District(object):
     """A globally unique name (or number) describing the district.
     """
 
+    identity = 0
+    """The id of the district. """
+
     boundary = []
     """A list of the ``x``, ``y`` coordinates of the polygon that 
     describes the district's boundary.
@@ -71,3 +74,6 @@ class District(object):
         """
         precinct.district = self
         self.precincts.append(precinct)
+
+    def compute_metrics(self):
+        return [{'name': 'hello', 'labels': [1, 2, 3, 4], 'data': [5, 6, 33, 11]}]

@@ -4,6 +4,10 @@ Voronoi Kivy App
 
 Runs the voronoi GUI app.
 """
+
+from kivy.support import install_twisted_reactor
+install_twisted_reactor()
+
 from itertools import cycle
 import logging
 import os
@@ -13,6 +17,7 @@ import json
 from functools import cmp_to_key
 
 from kivy.uix.widget import Widget
+from kivy.uix.label import Label
 from kivy.app import App
 from kivy.graphics.vertex_instructions import Line, Point, Mesh
 from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
@@ -26,6 +31,7 @@ import distopia
 from distopia.app.geo_data import GeoData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
+from distopia.app.ros import RosBridge
 
 __all__ = ('VoronoiWidget', 'VoronoiApp')
 
@@ -42,13 +48,9 @@ class VoronoiWidget(Widget):
 
     precinct_graphics = {}
 
-    max_districts = 0
-
     colors = []
 
     fiducials_color = {}
-
-    last_fiducials_pos_color = []
 
     table_mode = False
 
@@ -60,15 +62,29 @@ class VoronoiWidget(Widget):
 
     touches = {}
 
-    def __init__(self, voronoi_mapping=None, max_districts=0, table_mode=False,
-                 align_mat=None, screen_offset=(0, 0), **kwargs):
+    ros_bridge = None
+
+    district_blocks_fid = None
+
+    focus_block_fid = 8
+
+    focus_block_logical_id = 8
+
+    _has_focus = False
+
+    def __init__(self, voronoi_mapping=None, table_mode=False,
+                 align_mat=None, screen_offset=(0, 0), ros_bridge=None,
+                 district_blocks_fid=None, focus_block_fid=0,
+                 focus_block_logical_id=0, **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
+        self.ros_bridge = ros_bridge
+        self.district_blocks_fid = district_blocks_fid
+        self.focus_block_fid = focus_block_fid
+        self.focus_block_logical_id = focus_block_logical_id
 
         self.fiducial_graphics = {}
         self.fiducials_color = {}
-        self.last_fiducials_pos_color = []
-        self.max_districts = max_districts
         self.colors = cycle(plt.get_cmap('tab10').colors)
 
         self.table_mode = table_mode
@@ -107,50 +123,47 @@ class VoronoiWidget(Widget):
                     Line(points=precinct.boundary, width=1))
                 precinct_graphics[precinct] = graphics
 
-    def add_fiducial(self, location):
-        fiducial = self.voronoi_mapping.add_fiducial(location)
-
-        if not self.last_fiducials_pos_color:
-            self.fiducials_color[fiducial] = next(self.colors)
-            return fiducial
-
-        if len(self.last_fiducials_pos_color) == 1:
-            self.fiducials_color[fiducial] = self.last_fiducials_pos_color[0][1]
-            del self.last_fiducials_pos_color[0]
-            return fiducial
-
-        pos = np.array([item[0] for item in self.last_fiducials_pos_color])
-        location = np.array(location)
-        i = np.argmin(np.sqrt(np.sum((location - pos) ** 2, axis=1)))
-
-        self.fiducials_color[fiducial] = self.last_fiducials_pos_color[i][1]
-        del self.last_fiducials_pos_color[i]
-
+    def add_fiducial(self, location, identity):
+        fiducial = self.voronoi_mapping.add_fiducial(location, identity)
+        if identity not in self.fiducials_color:
+            self.fiducials_color[identity] = next(self.colors)
         return fiducial
 
     def remove_fiducial(self, fiducial, location):
         self.voronoi_mapping.remove_fiducial(fiducial)
 
-        color = self.fiducials_color.pop(fiducial)
-        self.last_fiducials_pos_color.append((location, color))
+    def handle_focus_block(self, pos=None):
+        pass
 
     def on_touch_down(self, touch):
         if not self.table_mode:
             return False
 
-        if len(self.voronoi_mapping.get_fiducials()) == self.max_districts:
+        focus_id = self.focus_block_logical_id
+        blocks_fid = self.district_blocks_fid
+        if 'markerid' not in touch.profile or (
+                touch.fid not in blocks_fid and touch.fid != focus_id):
             return False
 
         pos = self.align_touch(touch.pos)
-        key = self.add_fiducial(pos)
+
+        # handle focus block
+        if touch.fid == focus_id:
+            if self._has_focus:
+                return True
+            self.handle_focus_block(pos)
+            self._has_focus = touch
+            return True
+
+        logical_id = blocks_fid.index(touch.fid)
+        key = self.add_fiducial(pos, logical_id)
 
         with self.canvas:
             color = Color(rgba=(1, 1, 1, 1))
             point = Point(points=pos, pointsize=7)
 
-        id_ = touch.fid if 'markerid' in touch.profile else touch.uid
-        info = {'id': id_, 'fiducial_key': key, 'last_pos': pos,
-                'graphics': (color, point)}
+        info = {'fid': touch.fid, 'fiducial_key': key, 'last_pos': pos,
+                'graphics': (color, point), 'logical_id': logical_id}
         self.touches[touch.uid] = info
 
         self.voronoi_mapping.request_reassignment(self.voronoi_callback)
@@ -185,7 +198,7 @@ class VoronoiWidget(Widget):
                 info['fiducial_key'], self.align_touch(touch.pos))
             self.voronoi_mapping.request_reassignment(self.voronoi_callback)
         else:
-            if not self.touch_mode_handle_up(touch.pos):
+            if not self.touch_mode_handle_up(touch):
                 return False
 
             self.voronoi_mapping.request_reassignment(self.voronoi_callback)
@@ -200,8 +213,8 @@ class VoronoiWidget(Widget):
                 np.dot(self.align_mat, np.array([pos[0], pos[1], 1]))[:2])
         return pos
 
-    def touch_mode_handle_up(self, pos):
-        x, y = pos = self.align_touch(pos)
+    def touch_mode_handle_up(self, touch):
+        x, y = pos = self.align_touch(touch.pos)
 
         for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
             if ((x - x2) ** 2 + (y - y2) ** 2) ** .5 < 5:
@@ -211,10 +224,11 @@ class VoronoiWidget(Widget):
                     self.canvas.remove(item)
                 return True
 
-        if len(self.voronoi_mapping.get_fiducials()) == self.max_districts:
+        fid_count = len(self.voronoi_mapping.get_fiducials())
+        if fid_count == len(self.district_blocks_fid):
             return False
 
-        key = self.add_fiducial(pos)
+        key = self.add_fiducial(pos, fid_count)
 
         with self.canvas:
             color = Color(rgba=(1, 1, 1, 1))
@@ -237,22 +251,27 @@ class VoronoiWidget(Widget):
         self.district_graphics = []
 
     def recompute_voronoi(
-            self, districts, post_callback=None, largs=(), data_is_old=False):
+            self, districts, fiducial_identity, fiducial_pos,
+            post_callback=None, largs=(),
+            data_is_old=False):
         if data_is_old:
             return
 
         if post_callback is not None:
             post_callback(*largs)
+
+        fid_ids = [self.district_blocks_fid[i] for i in fiducial_identity]
+        if self.ros_bridge is not None:
+            self.ros_bridge.update_voronoi(
+                fiducial_pos, fid_ids, fiducial_identity, districts)
         if not districts:
             self.clear_voronoi()
             return
 
-        voronoi = self.voronoi_mapping
+        districts = self.voronoi_mapping.districts
         colors = self.fiducials_color
-        for fiducial in voronoi.get_fiducials():
-            district = voronoi.get_fiducial_district(fiducial)
-            color = colors[fiducial]
-
+        for district in districts:
+            color = colors[district.identity]
             for precinct in district.precincts:
                 self.precinct_graphics[precinct][0].rgb = color
 
@@ -262,7 +281,7 @@ class VoronoiWidget(Widget):
 
         with self.canvas:
             self.district_graphics.append(Color(1, 1, 0, 1))
-            for district in self.voronoi_mapping.districts:
+            for district in districts:
                 self.district_graphics.append(
                     Line(points=district.boundary + district.boundary[:2],
                          width=2))
@@ -274,6 +293,8 @@ class VoronoiApp(App):
 
     voronoi_mapping = None
 
+    ros_bridge = None
+
     use_county_dataset = True
 
     geo_data = None
@@ -282,8 +303,6 @@ class VoronoiApp(App):
 
     screen_size = (1900, 800)
 
-    max_districts = 8
-
     table_mode = False
 
     _profiler = None
@@ -291,6 +310,16 @@ class VoronoiApp(App):
     alignment_filename = 'alignment.txt'
 
     screen_offset = 0, 0
+
+    show_precinct_id = False
+
+    district_blocks_fid = [0, 1, 2, 3, 4, 5, 6, 7]
+
+    focus_block_fid = 8
+
+    focus_block_logical_id = 8
+
+    use_ros = False
 
     def create_voronoi(self):
         """Loads and initializes all the data and voronoi mapping.
@@ -315,16 +344,28 @@ class VoronoiApp(App):
         vor.screen_size = self.screen_size
         self.precincts = precincts = []
 
-        for record, polygons in zip(geo_data.records, geo_data.polygons):
+        for i, (record, polygons) in enumerate(
+                zip(geo_data.records, geo_data.polygons)):
             precinct = Precinct(
-                name=str(record[0]), boundary=polygons[0].reshape(-1).tolist())
+                name=str(record[0]), boundary=polygons[0].reshape(-1).tolist(),
+                identity=i, location=polygons[0].mean(axis=0).tolist())
             precincts.append(precinct)
 
         vor.set_precincts(precincts)
 
+    def show_precinct_labels(self, widget):
+        for i, precinct in enumerate(self.precincts):
+            label = Label(
+                text=str(precinct.identity), center=precinct.location,
+                font_size=20)
+            widget.add_widget(label)
+
     def load_config(self):
-        keys = ['use_county_dataset', 'screen_size', 'max_districts',
-                'table_mode', 'alignment_filename', 'screen_offset']
+        keys = ['use_county_dataset', 'screen_size',
+                'table_mode', 'alignment_filename', 'screen_offset',
+                'show_precinct_id', 'focus_block_fid',
+                'focus_block_logical_id', 'district_blocks_fid', 'use_ros']
+
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
         if not os.path.exists(fname):
@@ -349,19 +390,30 @@ class VoronoiApp(App):
             mat = np.loadtxt(fname, delimiter=',', skiprows=3)
 
         self.create_voronoi()
+        if self.use_ros:
+            self.ros_bridge = RosBridge()
         widget = VoronoiWidget(
             voronoi_mapping=self.voronoi_mapping,
-            max_districts=self.max_districts,
             table_mode=self.table_mode, align_mat=mat,
-            screen_offset=self.screen_offset)
+            screen_offset=self.screen_offset, ros_bridge=self.ros_bridge,
+            district_blocks_fid=self.district_blocks_fid,
+            focus_block_fid=self.focus_block_fid,
+            focus_block_logical_id=self.focus_block_logical_id)
+
+        if self.show_precinct_id:
+            self.show_precinct_labels(widget)
         self._profiler = widget._profiler = cProfile.Profile()
         return widget
 
 
 if __name__ == '__main__':
     app = VoronoiApp()
-    app.run()
-    app.voronoi_mapping.stop_thread()
+    try:
+        app.run()
+    finally:
+        app.voronoi_mapping.stop_thread()
+        if app.ros_bridge:
+            app.ros_bridge.stop_threads()
 
     # s = io.StringIO()
     # ps = pstats.Stats(app._profiler, stream=s).sort_stats('cumulative')

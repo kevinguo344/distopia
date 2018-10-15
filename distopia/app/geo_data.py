@@ -12,6 +12,7 @@ Some of our data sources:
 - https://elections.wi.gov/sites/default/files/11.4.14%20Election%20Results-all%20offices-w%20x%20w%20report.pdf
 - https://www.cityofmadison.com/planning/unit_planning/map_aldermanic/ald_dist_8x10.pdf
 - https://data-wi-dnr.opendata.arcgis.com/datasets/county-boundaries-24k
+- https://www.arcgis.com/home/item.html?id=62d5782482cd45f2898fe7e3d4272c10
 
 We assume that in wisconsin, wards are precincts.
 """

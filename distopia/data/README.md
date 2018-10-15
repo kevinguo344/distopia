@@ -17,6 +17,12 @@ The last three lines is a 3x3 matrix that when multiplied by tuio position, will
 
 I.e. ``screes_pos = np.dot(mat, tuio_pos)``, where ``*_pos`` is ``(x, y, 1)``.
 
+
+county_adjacency.json
+************************
+
+Contains the adjacency matrix for each county numbered as ordered in the dataset.
+
 Data
 -------
 

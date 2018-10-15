@@ -17,6 +17,9 @@ class Precinct(object):
     """A globally unique name (or number) describing the precinct.
     """
 
+    identity = 0
+    """The id of the precinct. """
+
     boundary = []
     """A nx2 list of the ``x``, ``y`` coordinates of the polygon that
     describes the precinct's boundary.
@@ -42,10 +45,13 @@ class Precinct(object):
     contains the metric data for this precinct.
     """
 
-    def __init__(self, boundary=None, name='', **kwargs):
+    def __init__(self, boundary=None, identity=0, name='', location=(0, 0),
+                 **kwargs):
         super(Precinct, self).__init__(**kwargs)
         if boundary is None:
             boundary = []
+        self.identity = identity
+        self.location = location
         self.boundary = boundary
         self.name = name
         self.neighbours = []
