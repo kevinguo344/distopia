@@ -14,7 +14,7 @@ class Precinct(object):
     """
 
     name = ''
-    """A globally unique name (or number) describing the precinct.
+    """Name describing the precinct.
     """
 
     identity = 0

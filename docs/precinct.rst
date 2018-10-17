@@ -1,5 +1,5 @@
-Precinct
-============
+Precinct Documentation
+=======================
 
 .. automodule:: distopia.precinct
    :members:

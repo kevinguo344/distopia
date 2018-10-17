@@ -76,4 +76,5 @@ class District(object):
         self.precincts.append(precinct)
 
     def compute_metrics(self):
-        return [{'name': 'hello', 'labels': [1, 2, 3, 4], 'data': [5, 6, 33, 11]}]
+        for metric in self.metrics.values():
+            metric.compute()

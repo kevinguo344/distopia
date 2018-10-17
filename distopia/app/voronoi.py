@@ -14,6 +14,7 @@ import os
 import cProfile, pstats, io
 import numpy as np
 import json
+import csv
 from functools import cmp_to_key
 
 from kivy.uix.widget import Widget
@@ -32,6 +33,8 @@ from distopia.app.geo_data import GeoData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
 from distopia.app.ros import RosBridge
+from distopia.precinct.metrics import PrecinctHistogram
+from distopia.district.metrics import DistrictHistogramAggregateMetric
 
 __all__ = ('VoronoiWidget', 'VoronoiApp')
 
@@ -72,16 +75,25 @@ class VoronoiWidget(Widget):
 
     _has_focus = False
 
+    district_metrics_fn = None
+
+    state_metrics_fn = None
+
+    metric_selection_width = 200
+
     def __init__(self, voronoi_mapping=None, table_mode=False,
                  align_mat=None, screen_offset=(0, 0), ros_bridge=None,
                  district_blocks_fid=None, focus_block_fid=0,
-                 focus_block_logical_id=0, **kwargs):
+                 focus_block_logical_id=0, district_metrics_fn=None,
+                 state_metrics_fn=None,
+                 metric_selection_width=200, **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
         self.ros_bridge = ros_bridge
         self.district_blocks_fid = district_blocks_fid
         self.focus_block_fid = focus_block_fid
         self.focus_block_logical_id = focus_block_logical_id
+        self.metric_selection_width = metric_selection_width
 
         self.fiducial_graphics = {}
         self.fiducials_color = {}
@@ -90,6 +102,8 @@ class VoronoiWidget(Widget):
         self.table_mode = table_mode
         self.align_mat = align_mat
         self.district_graphics = []
+        self.district_metrics_fn = district_metrics_fn
+        self.state_metrics_fn = state_metrics_fn
         self.screen_offset = screen_offset
         self.touches = {}
 
@@ -205,12 +219,12 @@ class VoronoiWidget(Widget):
         return True
 
     def align_touch(self, pos):
-        x0, y0 = self.screen_offset
-        pos = pos[0] - x0, pos[1] - y0
-
         if self.align_mat is not None:
             pos = tuple(
                 np.dot(self.align_mat, np.array([pos[0], pos[1], 1]))[:2])
+
+        x0, y0 = self.screen_offset
+        pos = pos[0] - x0, pos[1] - y0
         return pos
 
     def touch_mode_handle_up(self, touch):
@@ -238,7 +252,7 @@ class VoronoiWidget(Widget):
 
     def voronoi_callback(self, *largs):
         def _callback(dt):
-            self.recompute_voronoi(*largs)
+            self.process_voronoi_output(*largs)
         Clock.schedule_once(_callback)
 
     def clear_voronoi(self):
@@ -250,7 +264,7 @@ class VoronoiWidget(Widget):
             self.canvas.remove(item)
         self.district_graphics = []
 
-    def recompute_voronoi(
+    def process_voronoi_output(
             self, districts, fiducial_identity, fiducial_pos,
             post_callback=None, largs=(),
             data_is_old=False):
@@ -260,10 +274,14 @@ class VoronoiWidget(Widget):
         if post_callback is not None:
             post_callback(*largs)
 
+        self.district_metrics_fn(districts)
+        state_metrics = self.state_metrics_fn(districts)
+
         fid_ids = [self.district_blocks_fid[i] for i in fiducial_identity]
         if self.ros_bridge is not None:
             self.ros_bridge.update_voronoi(
-                fiducial_pos, fid_ids, fiducial_identity, districts)
+                fiducial_pos, fid_ids, fiducial_identity, districts,
+                state_metrics)
         if not districts:
             self.clear_voronoi()
             return
@@ -321,6 +339,46 @@ class VoronoiApp(App):
 
     use_ros = False
 
+    metrics = ['demographics', ]
+
+    metric_selection_width = 200
+
+    def create_district_metrics(self, districts):
+        for district in districts:
+            if 'demographics' in self.metrics:
+                district.metrics['demographics'] = \
+                    DistrictHistogramAggregateMetric(
+                        district=district, name='demographics')
+
+    def load_precinct_metrics(self):
+        assert self.use_county_dataset
+        if 'demographics' not in self.metrics:
+            return
+
+        geo_data = self.geo_data
+        names = set(r[3] for r in geo_data.records)
+        names = {v: v for v in names}
+        names['Saint Croix'] = 'St. Croix'
+
+        fname = os.path.join(
+            os.path.dirname(distopia.__file__), 'data',
+            'County_Boundaries_24K', 'demographics.csv')
+        with open(fname) as fh:
+            reader = csv.reader(fh)
+            header = next(reader)
+
+            data = {}
+            for row in reader:
+                data[row[0]] = list(map(int, row[1:]))
+
+        for precinct, record in zip(self.precincts, geo_data.records):
+            name = names[record[3]]
+            precinct.metrics['demographics'] = PrecinctHistogram(
+                name='demographics', labels=header, data=data[name])
+
+    def create_state_metrics(self, districts):
+        return []
+
     def create_voronoi(self):
         """Loads and initializes all the data and voronoi mapping.
         """
@@ -364,7 +422,8 @@ class VoronoiApp(App):
         keys = ['use_county_dataset', 'screen_size',
                 'table_mode', 'alignment_filename', 'screen_offset',
                 'show_precinct_id', 'focus_block_fid',
-                'focus_block_logical_id', 'district_blocks_fid', 'use_ros']
+                'focus_block_logical_id', 'district_blocks_fid', 'use_ros',
+                'metrics']
 
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
@@ -376,6 +435,10 @@ class VoronoiApp(App):
         with open(fname, 'r') as fp:
             for key, val in json.load(fp).items():
                 setattr(self, key, val)
+
+        config = {key: getattr(self, key) for key in keys}
+        with open(fname, 'w') as fp:
+            json.dump(config, fp, indent=2, sort_keys=True)
 
     def build(self):
         """Builds the GUI.
@@ -390,6 +453,7 @@ class VoronoiApp(App):
             mat = np.loadtxt(fname, delimiter=',', skiprows=3)
 
         self.create_voronoi()
+        self.load_precinct_metrics()
         if self.use_ros:
             self.ros_bridge = RosBridge()
         widget = VoronoiWidget(
@@ -398,7 +462,10 @@ class VoronoiApp(App):
             screen_offset=self.screen_offset, ros_bridge=self.ros_bridge,
             district_blocks_fid=self.district_blocks_fid,
             focus_block_fid=self.focus_block_fid,
-            focus_block_logical_id=self.focus_block_logical_id)
+            focus_block_logical_id=self.focus_block_logical_id,
+            district_metrics_fn=self.create_district_metrics,
+            state_metrics_fn=self.create_state_metrics,
+            metric_selection_width=self.metric_selection_width)
 
         if self.show_precinct_id:
             self.show_precinct_labels(widget)

@@ -11,6 +11,10 @@ import json
 import roslibpy
 import logging
 
+from distopia.district.metrics import DistrictHistogramAggregateMetric
+
+__all__ = ('RosBridge', )
+
 
 class RosBridge(object):
     """Maintains subscribers and publishers to a ROS master via rosbridge
@@ -24,7 +28,7 @@ class RosBridge(object):
 
     ready_callback = None
 
-    def __init__(self, host="daarm.ngrok.io", port=80, ready_callback=None):
+    def __init__(self, host="localhost", port=9090, ready_callback=None):
         self.ready_callback = ready_callback
 
         self.ros = ros = roslibpy.Ros(host=host, port=port)
@@ -33,10 +37,42 @@ class RosBridge(object):
 
     def start_publisher_thread(self):
         logging.info('Connected to ros-bridge')
+
+        designs_topic = roslibpy.Topic(
+            self.ros, '/evaluated_designs', 'std_msgs/String')
+        designs_topic.advertise()
+
+        blocks_topic = roslibpy.Topic(
+            self.ros, '/blocks', 'std_msgs/String')
+        blocks_topic.advertise()
+
+        tuio_topic = roslibpy.Topic(
+            self.ros, '/tuio_control', 'std_msgs/String')
+        tuio_topic.advertise()
+        logging.info('Started ros-bridge publishers')
+
+        import time
+        time.sleep(5)
+        def echo(msg):
+            print(msg)
+        def echo2(msg):
+            print(msg)
+        designs_topic2 = roslibpy.Topic(
+            self.ros, '/evaluated_designs', 'std_msgs/String')
+        blocks_topic2 = roslibpy.Topic(
+            self.ros, '/blocks', 'std_msgs/String')
+        designs_topic2.subscribe(echo)
+        blocks_topic2.subscribe(echo2)
+        #tuio_topic.subscribe(echo)
+
         self._publisher_thread_queue = Queue()
         self._publisher_thread = thread = Thread(
-            target=self.publisher_thread_function)
+            target=self.publisher_thread_function,
+            args=(designs_topic, blocks_topic, tuio_topic))
         thread.start()
+
+        if self.ready_callback:
+            self.ready_callback()
 
     def stop_threads(self):
         if self._publisher_thread is not None:
@@ -51,32 +87,65 @@ class RosBridge(object):
 
     def update_voronoi(
             self, fiducials_locations, fiducial_ids, fiducial_logical_ids,
-            districts):
+            districts, state_metrics):
         self._publisher_thread_queue.put(
             ('voronoi',
              (fiducials_locations, fiducial_ids, fiducial_logical_ids,
-              districts)))
+              districts, state_metrics)))
 
-    def publisher_thread_function(self):
+    @staticmethod
+    def get_district_metrics(district):
+        metrics = []
+        for metric in district.metrics.values():
+            if isinstance(metric, DistrictHistogramAggregateMetric):
+                item = {
+                    "name": metric.name, "labels": metric.labels,
+                    "data": metric.data}
+            else:
+                assert False, metric
+            metrics.append(item)
+        return metrics
+
+    @staticmethod
+    def get_state_metrics(state_metrics):
+        metrics = []
+        for metric in state_metrics:
+            metric.compute()
+            metrics.append({"name": "something", "labels": [], "data": []})
+        return metrics
+
+    def make_computation_packet(
+            self, fiducials_locations, fiducial_ids, fiducial_logical_ids,
+            districts, state_metrics):
+        state_data = self.get_state_metrics(state_metrics)
+
+        districts_data = []
+        for district in districts:
+            district.compute_metrics()
+
+            district_data = {
+                'district_id': district.identity,
+                'precincts': [p.identity for p in district.precincts],
+                'metrics': self.get_district_metrics(district)
+            }
+            districts_data.append(district_data)
+
+        blocks_data = []
+        for (x, y), fid_id, logical_id in zip(
+                fiducials_locations, fiducial_ids,
+                fiducial_logical_ids):
+            item = {
+                'x': x, 'y': y, 'fid_id': fid_id,
+                'logical_id': logical_id}
+            blocks_data.append(item)
+
+        return state_data, districts_data, blocks_data
+
+    def publisher_thread_function(
+            self, designs_topic, blocks_topic, tuio_topic):
         assert self.ros is not None
         queue = self._publisher_thread_queue
-
         packet_count = 0
-        designs_topic = roslibpy.Topic(
-            self.ros, '/evaluated_designs', 'std_msgs/String')
-        designs_topic.advertise()
-
-        blocks_topic = roslibpy.Topic(
-            self.ros, '/blocks', 'std_msgs/String')
-        blocks_topic.advertise()
-
-        tuio_topic = roslibpy.Topic(
-            self.ros, '/tuio_control', 'std_msgs/String')
-        tuio_topic.advertise()
-        logging.info('Started ros-bridge publishers')
-
-        if self.ready_callback:
-            self.ready_callback()
 
         while True:
             item, val = queue.get(block=True)
@@ -94,31 +163,15 @@ class RosBridge(object):
 
                 tuio_topic.publish({'data': encoded_str})
             elif item == 'voronoi':
-                fiducials_locations, fiducial_ids, fiducial_logical_ids, \
-                    districts = val
+                state_data, districts_data, blocks_data = \
+                    self.make_computation_packet(*val)
+
                 count = packet_count
                 packet_count += 1
 
-                districts_data = []
-                for district in districts:
-                    district_data = {
-                        'district_id': district.identity,
-                        'precincts': [p.identity for p in district.precincts],
-                        'metrics': district.compute_metrics()
-                    }
-                    districts_data.append(district_data)
-
-                blocks_data = []
-                for (x, y), fid_id, logical_id in zip(
-                        fiducials_locations, fiducial_ids,
-                        fiducial_logical_ids):
-                    item = {
-                        'x': x, 'y': y, 'fid_id': fid_id,
-                        'logical_id': logical_id}
-                    blocks_data.append(item)
-
                 encoded_str = json.dumps(
-                    {'count': count, 'districts': districts_data})
+                    {'count': count, 'districts': districts_data,
+                     'metrics': state_data})
                 designs_topic.publish({'data': encoded_str})
 
                 encoded_str = json.dumps(

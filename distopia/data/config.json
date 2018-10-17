@@ -1,15 +1,5 @@
 {
   "alignment_filename": "alignment.txt",
-  "screen_offset": [
-    0,
-    0
-  ],
-  "screen_size": [
-    1920,
-    1080
-  ],
-  "table_mode": false,
-  "use_county_dataset": true,
   "district_blocks_fid": [
     0,
     1,
@@ -22,6 +12,19 @@
   ],
   "focus_block_fid": 8,
   "focus_block_logical_id": 8,
+  "metrics": [
+    "demographics"
+  ],
+  "screen_offset": [
+    0,
+    0
+  ],
+  "screen_size": [
+    1920,
+    1080
+  ],
   "show_precinct_id": false,
+  "table_mode": false,
+  "use_county_dataset": true,
   "use_ros": true
 }
