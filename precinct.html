@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Precinct &#8212; Distopia  documentation</title>
+    <title>Precinct Documentation &#8212; Distopia  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -35,9 +35,9 @@
           <div class="body" role="main">
             
   <div class="section" id="module-distopia.precinct">
-<span id="precinct"></span><h1>Precinct<a class="headerlink" href="#module-distopia.precinct" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>Precinct<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span id="precinct-documentation"></span><h1>Precinct Documentation<a class="headerlink" href="#module-distopia.precinct" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="precinct">
+<h2>Precinct<a class="headerlink" href="#precinct" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference internal" href="#distopia.precinct.Precinct" title="distopia.precinct.Precinct"><code class="xref py py-class docutils literal notranslate"><span class="pre">Precinct</span></code></a> defines a precinct and it’s immutable data.</p>
 <dl class="class">
 <dt id="distopia.precinct.Precinct">
@@ -80,7 +80,7 @@ contains the metric data for this precinct.</p>
 <dl class="attribute">
 <dt id="distopia.precinct.Precinct.name">
 <code class="descname">name</code><em class="property"> = ''</em><a class="headerlink" href="#distopia.precinct.Precinct.name" title="Permalink to this definition">¶</a></dt>
-<dd><p>A globally unique name (or number) describing the precinct.</p>
+<dd><p>Name describing the precinct.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -98,7 +98,7 @@ precinct.</p>
 <p>Defines metrics that are specific to Precincts.</p>
 <dl class="class">
 <dt id="distopia.precinct.metrics.PrecinctMetric">
-<em class="property">class </em><code class="descclassname">distopia.precinct.metrics.</code><code class="descname">PrecinctMetric</code><a class="reference internal" href="_modules/distopia/precinct/metrics.html#PrecinctMetric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.precinct.metrics.PrecinctMetric" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">distopia.precinct.metrics.</code><code class="descname">PrecinctMetric</code><span class="sig-paren">(</span><em>name</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/precinct/metrics.html#PrecinctMetric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.precinct.metrics.PrecinctMetric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Metrics used with <a class="reference internal" href="#distopia.precinct.Precinct" title="distopia.precinct.Precinct"><code class="xref py py-class docutils literal notranslate"><span class="pre">distopia.precinct.Precinct</span></code></a>.</p>
 <dl class="attribute">
 <dt id="distopia.precinct.metrics.PrecinctMetric.name">
@@ -107,6 +107,21 @@ precinct.</p>
 </dd></dl>
 
 </dd></dl>
+
+<dl class="class">
+<dt id="distopia.precinct.metrics.PrecinctHistogram">
+<em class="property">class </em><code class="descclassname">distopia.precinct.metrics.</code><code class="descname">PrecinctHistogram</code><span class="sig-paren">(</span><em>data</em>, <em>labels</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/precinct/metrics.html#PrecinctHistogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.precinct.metrics.PrecinctHistogram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="distopia.precinct.metrics.PrecinctScalar">
+<em class="property">class </em><code class="descclassname">distopia.precinct.metrics.</code><code class="descname">PrecinctScalar</code><span class="sig-paren">(</span><em>value</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/precinct/metrics.html#PrecinctScalar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.precinct.metrics.PrecinctScalar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="distopia.precinct.metrics.PrecinctCategory">
+<em class="property">class </em><code class="descclassname">distopia.precinct.metrics.</code><code class="descname">PrecinctCategory</code><span class="sig-paren">(</span><em>value</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/precinct/metrics.html#PrecinctCategory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.precinct.metrics.PrecinctCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 </div>
@@ -131,14 +146,16 @@ precinct.</p>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="distopia.html">Distopia</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Precinct</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id1">Precinct</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Precinct Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#precinct">Precinct</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#precinct-metrics">Precinct Metrics</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
 </ul>
 

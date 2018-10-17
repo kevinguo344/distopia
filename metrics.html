@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Distopia &#8212; Distopia  documentation</title>
+    <title>State Level Metrics &#8212; Distopia  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -16,8 +16,8 @@
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Precinct Documentation" href="precinct.html" />
-    <link rel="prev" title="Welcome to Distopia’s documentation!" href="index.html" />
+    <link rel="next" title="Apps" href="app.html" />
+    <link rel="prev" title="Mapping" href="mapping.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -34,11 +34,23 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="module-distopia">
-<span id="distopia"></span><h1>Distopia<a class="headerlink" href="#module-distopia" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>Distopia<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<p>The backend architecture for district creation and precinct assignment.</p>
+  <div class="section" id="module-distopia.metrics">
+<span id="state-level-metrics"></span><h1>State Level Metrics<a class="headerlink" href="#module-distopia.metrics" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="states-metrics">
+<h2>States Metrics<a class="headerlink" href="#states-metrics" title="Permalink to this headline">¶</a></h2>
+<p>Defines metrics that summarize the state based on the districts.</p>
+<dl class="class">
+<dt id="distopia.metrics.StateMetric">
+<em class="property">class </em><code class="descclassname">distopia.metrics.</code><code class="descname">StateMetric</code><span class="sig-paren">(</span><em>name</em>, <em>districts</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/metrics.html#StateMetric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.metrics.StateMetric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Metrics used across <a class="reference internal" href="district.html#distopia.district.District" title="distopia.district.District"><code class="xref py py-class docutils literal notranslate"><span class="pre">distopia.district.District</span></code></a>.</p>
+<dl class="attribute">
+<dt id="distopia.metrics.StateMetric.name">
+<code class="descname">name</code><em class="property"> = ''</em><a class="headerlink" href="#distopia.metrics.StateMetric.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>A globally unique metric name that describes the metric.</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 </div>
 
@@ -61,14 +73,14 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Distopia</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id1">Distopia</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="distopia.html">Distopia</a></li>
 <li class="toctree-l1"><a class="reference internal" href="precinct.html">Precinct Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
-<li class="toctree-l1"><a class="reference internal" href="metrics.html">State Level Metrics</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">State Level Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#states-metrics">States Metrics</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="app.html">Apps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
@@ -78,8 +90,8 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Welcome to Distopia’s documentation!</a></li>
-      <li>Next: <a href="precinct.html" title="next chapter">Precinct Documentation</a></li>
+      <li>Previous: <a href="mapping.html" title="previous chapter">Mapping</a></li>
+      <li>Next: <a href="app.html" title="next chapter">Apps</a></li>
   </ul></li>
 </ul>
 </div>
@@ -115,7 +127,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="_sources/distopia.rst.txt"
+      <a href="_sources/metrics.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

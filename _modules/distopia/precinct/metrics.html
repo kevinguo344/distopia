@@ -40,7 +40,8 @@
 <span class="sd">Defines metrics that are specific to Precincts.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;PrecinctMetric&#39;</span><span class="p">,</span> <span class="p">)</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;PrecinctMetric&#39;</span><span class="p">,</span> <span class="s1">&#39;PrecinctHistogram&#39;</span><span class="p">,</span> <span class="s1">&#39;PrecinctScalar&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;PrecinctCategory&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="PrecinctMetric"><a class="viewcode-back" href="../../../precinct.html#distopia.precinct.metrics.PrecinctMetric">[docs]</a><span class="k">class</span> <span class="nc">PrecinctMetric</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -49,7 +50,41 @@
 
     <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="sd">&quot;&quot;&quot;A globally unique metric name that describes the metric.</span>
-<span class="sd">    &quot;&quot;&quot;</span></div>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecinctMetric</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="PrecinctHistogram"><a class="viewcode-back" href="../../../precinct.html#distopia.precinct.metrics.PrecinctHistogram">[docs]</a><span class="k">class</span> <span class="nc">PrecinctHistogram</span><span class="p">(</span><span class="n">PrecinctMetric</span><span class="p">):</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecinctHistogram</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span></div>
+
+
+<div class="viewcode-block" id="PrecinctScalar"><a class="viewcode-back" href="../../../precinct.html#distopia.precinct.metrics.PrecinctScalar">[docs]</a><span class="k">class</span> <span class="nc">PrecinctScalar</span><span class="p">(</span><span class="n">PrecinctMetric</span><span class="p">):</span>
+
+    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecinctScalar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="PrecinctCategory"><a class="viewcode-back" href="../../../precinct.html#distopia.precinct.metrics.PrecinctCategory">[docs]</a><span class="k">class</span> <span class="nc">PrecinctCategory</span><span class="p">(</span><span class="n">PrecinctMetric</span><span class="p">):</span>
+
+    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecinctCategory</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span></div>
 </pre></div>
 
           </div>
@@ -71,10 +106,12 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../distopia.html">Distopia</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../precinct.html">Precinct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../precinct.html">Precinct Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utils.html">Utilities</a></li>
 </ul>
 

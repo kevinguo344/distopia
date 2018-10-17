@@ -40,8 +40,10 @@
 <span class="sd">Defines metrics that summarize the district based on the contained precincts</span>
 <span class="sd">and other metadata.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;DistrictMetric&#39;</span><span class="p">,</span> <span class="p">)</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;DistrictMetric&#39;</span><span class="p">,</span> <span class="s1">&#39;DistrictAggregateMetric&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;DistrictHistogramAggregateMetric&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="DistrictMetric"><a class="viewcode-back" href="../../../district.html#distopia.district.metrics.DistrictMetric">[docs]</a><span class="k">class</span> <span class="nc">DistrictMetric</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -50,7 +52,43 @@
 
     <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="sd">&quot;&quot;&quot;A globally unique metric name that describes the metric.</span>
-<span class="sd">    &quot;&quot;&quot;</span></div>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DistrictMetric</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="DistrictAggregateMetric"><a class="viewcode-back" href="../../../district.html#distopia.district.metrics.DistrictAggregateMetric">[docs]</a><span class="k">class</span> <span class="nc">DistrictAggregateMetric</span><span class="p">(</span><span class="n">DistrictMetric</span><span class="p">):</span>
+
+    <span class="n">district</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">district</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DistrictAggregateMetric</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">district</span> <span class="o">=</span> <span class="n">district</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="DistrictHistogramAggregateMetric"><a class="viewcode-back" href="../../../district.html#distopia.district.metrics.DistrictHistogramAggregateMetric">[docs]</a><span class="k">class</span> <span class="nc">DistrictHistogramAggregateMetric</span><span class="p">(</span><span class="n">DistrictAggregateMetric</span><span class="p">):</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">labels</span>
+        <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">precinct_metrics</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span></div>
 </pre></div>
 
           </div>
@@ -72,10 +110,12 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../distopia.html">Distopia</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../precinct.html">Precinct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../precinct.html">Precinct Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utils.html">Utilities</a></li>
 </ul>
 

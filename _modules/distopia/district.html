@@ -111,7 +111,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precinct</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">compute_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">11</span><span class="p">]}]</span></div>
+        <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">metric</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span></div>
 </pre></div>
 
           </div>
@@ -133,10 +134,12 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../distopia.html">Distopia</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../precinct.html">Precinct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../precinct.html">Precinct Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
 </ul>
 

@@ -1,0 +1,291 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>distopia.app.ros &#8212; Distopia  documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for distopia.app.ros</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">ROS Bridge</span>
+<span class="sd">=============</span>
+
+<span class="sd">Publishes the state of the system to ROS.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
+<span class="kn">from</span> <span class="nn">queue</span> <span class="k">import</span> <span class="n">Queue</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">roslibpy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">distopia.district.metrics</span> <span class="k">import</span> <span class="n">DistrictHistogramAggregateMetric</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;RosBridge&#39;</span><span class="p">,</span> <span class="p">)</span>
+
+
+<div class="viewcode-block" id="RosBridge"><a class="viewcode-back" href="../../../ros.html#distopia.app.ros.RosBridge">[docs]</a><span class="k">class</span> <span class="nc">RosBridge</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Maintains subscribers and publishers to a ROS master via rosbridge</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_publisher_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">_publisher_thread_queue</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">ros</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">ready_callback</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">9090</span><span class="p">,</span> <span class="n">ready_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ready_callback</span> <span class="o">=</span> <span class="n">ready_callback</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="o">=</span> <span class="n">ros</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Ros</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="n">ros</span><span class="o">.</span><span class="n">on_ready</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_publisher_thread</span><span class="p">)</span>
+        <span class="n">ros</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">start_publisher_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Connected to ros-bridge&#39;</span><span class="p">)</span>
+
+        <span class="n">designs_topic</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/evaluated_designs&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
+        <span class="n">designs_topic</span><span class="o">.</span><span class="n">advertise</span><span class="p">()</span>
+
+        <span class="n">blocks_topic</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/blocks&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
+        <span class="n">blocks_topic</span><span class="o">.</span><span class="n">advertise</span><span class="p">()</span>
+
+        <span class="n">tuio_topic</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/tuio_control&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
+        <span class="n">tuio_topic</span><span class="o">.</span><span class="n">advertise</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Started ros-bridge publishers&#39;</span><span class="p">)</span>
+
+        <span class="kn">import</span> <span class="nn">time</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">echo</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">echo2</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">designs_topic2</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/evaluated_designs&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
+        <span class="n">blocks_topic2</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/blocks&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
+        <span class="n">designs_topic2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">echo</span><span class="p">)</span>
+        <span class="n">blocks_topic2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">echo2</span><span class="p">)</span>
+        <span class="c1">#tuio_topic.subscribe(echo)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span> <span class="o">=</span> <span class="n">thread</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span>
+            <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">publisher_thread_function</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">designs_topic</span><span class="p">,</span> <span class="n">blocks_topic</span><span class="p">,</span> <span class="n">tuio_topic</span><span class="p">))</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ready_callback</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ready_callback</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">stop_threads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s1">&#39;eof&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">update_tuio_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">&#39;focus&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">update_voronoi</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">fiducials_locations</span><span class="p">,</span> <span class="n">fiducial_ids</span><span class="p">,</span> <span class="n">fiducial_logical_ids</span><span class="p">,</span>
+            <span class="n">districts</span><span class="p">,</span> <span class="n">state_metrics</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">&#39;voronoi&#39;</span><span class="p">,</span>
+             <span class="p">(</span><span class="n">fiducials_locations</span><span class="p">,</span> <span class="n">fiducial_ids</span><span class="p">,</span> <span class="n">fiducial_logical_ids</span><span class="p">,</span>
+              <span class="n">districts</span><span class="p">,</span> <span class="n">state_metrics</span><span class="p">)))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_district_metrics</span><span class="p">(</span><span class="n">district</span><span class="p">):</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">district</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">metric</span><span class="p">,</span> <span class="n">DistrictHistogramAggregateMetric</span><span class="p">):</span>
+                <span class="n">item</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">metric</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">metric</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+                    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">metric</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="n">metric</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">metrics</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_state_metrics</span><span class="p">(</span><span class="n">state_metrics</span><span class="p">):</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">state_metrics</span><span class="p">:</span>
+            <span class="n">metric</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;something&quot;</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[]})</span>
+        <span class="k">return</span> <span class="n">metrics</span>
+
+    <span class="k">def</span> <span class="nf">make_computation_packet</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">fiducials_locations</span><span class="p">,</span> <span class="n">fiducial_ids</span><span class="p">,</span> <span class="n">fiducial_logical_ids</span><span class="p">,</span>
+            <span class="n">districts</span><span class="p">,</span> <span class="n">state_metrics</span><span class="p">):</span>
+        <span class="n">state_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_state_metrics</span><span class="p">(</span><span class="n">state_metrics</span><span class="p">)</span>
+
+        <span class="n">districts_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">district</span> <span class="ow">in</span> <span class="n">districts</span><span class="p">:</span>
+            <span class="n">district</span><span class="o">.</span><span class="n">compute_metrics</span><span class="p">()</span>
+
+            <span class="n">district_data</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;district_id&#39;</span><span class="p">:</span> <span class="n">district</span><span class="o">.</span><span class="n">identity</span><span class="p">,</span>
+                <span class="s1">&#39;precincts&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">identity</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">],</span>
+                <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_district_metrics</span><span class="p">(</span><span class="n">district</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="n">districts_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">district_data</span><span class="p">)</span>
+
+        <span class="n">blocks_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="n">fid_id</span><span class="p">,</span> <span class="n">logical_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="n">fiducials_locations</span><span class="p">,</span> <span class="n">fiducial_ids</span><span class="p">,</span>
+                <span class="n">fiducial_logical_ids</span><span class="p">):</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;fid_id&#39;</span><span class="p">:</span> <span class="n">fid_id</span><span class="p">,</span>
+                <span class="s1">&#39;logical_id&#39;</span><span class="p">:</span> <span class="n">logical_id</span><span class="p">}</span>
+            <span class="n">blocks_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">state_data</span><span class="p">,</span> <span class="n">districts_data</span><span class="p">,</span> <span class="n">blocks_data</span>
+
+    <span class="k">def</span> <span class="nf">publisher_thread_function</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">designs_topic</span><span class="p">,</span> <span class="n">blocks_topic</span><span class="p">,</span> <span class="n">tuio_topic</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span>
+        <span class="n">packet_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">item</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;eof&#39;</span><span class="p">:</span>
+                <span class="n">tuio_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                <span class="n">blocks_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                <span class="n">designs_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                <span class="k">return</span>
+
+            <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+                <span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span> <span class="o">=</span> <span class="n">val</span>
+                <span class="n">cmd</span> <span class="o">=</span> <span class="s1">&#39;focus_district&#39;</span> <span class="k">if</span> <span class="n">focus_district</span> <span class="k">else</span> <span class="s1">&#39;focus_state&#39;</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_param</span><span class="p">)</span>
+                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;cmd&#39;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">,</span> <span class="s1">&#39;param&#39;</span><span class="p">:</span> <span class="n">param</span><span class="p">})</span>
+
+                <span class="n">tuio_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span>
+            <span class="k">elif</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;voronoi&#39;</span><span class="p">:</span>
+                <span class="n">state_data</span><span class="p">,</span> <span class="n">districts_data</span><span class="p">,</span> <span class="n">blocks_data</span> <span class="o">=</span> \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">make_computation_packet</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">)</span>
+
+                <span class="n">count</span> <span class="o">=</span> <span class="n">packet_count</span>
+                <span class="n">packet_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;districts&#39;</span><span class="p">:</span> <span class="n">districts_data</span><span class="p">,</span>
+                     <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">state_data</span><span class="p">})</span>
+                <span class="n">designs_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span>
+
+                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;fiducials&#39;</span><span class="p">:</span> <span class="n">blocks_data</span><span class="p">})</span>
+                <span class="n">blocks_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Distopia</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../distopia.html">Distopia</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../precinct.html">Precinct Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../district.html">District</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../metrics.html">State Level Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ros.html">ROS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, hrc2da.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

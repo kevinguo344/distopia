@@ -14,7 +14,9 @@ Welcome to Distopia's documentation!
    precinct
    district
    mapping
+   metrics
    app
+   ros
    utils
 
 

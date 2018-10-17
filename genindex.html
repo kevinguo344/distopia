@@ -110,6 +110,8 @@
 </li>
       <li><a href="app.html#module-distopia.app.geo_data">distopia.app.geo_data (module)</a>
 </li>
+      <li><a href="ros.html#module-distopia.app.ros">distopia.app.ros (module)</a>
+</li>
       <li><a href="district.html#module-distopia.district">distopia.district (module)</a>
 </li>
       <li><a href="district.html#module-distopia.district.metrics">distopia.district.metrics (module)</a>
@@ -118,9 +120,11 @@
 </li>
       <li><a href="mapping.html#module-distopia.mapping._voronoi">distopia.mapping._voronoi (module)</a>
 </li>
+      <li><a href="mapping.html#module-distopia.mapping.voronoi">distopia.mapping.voronoi (module)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="mapping.html#module-distopia.mapping.voronoi">distopia.mapping.voronoi (module)</a>
+      <li><a href="metrics.html#module-distopia.metrics">distopia.metrics (module)</a>
 </li>
       <li><a href="precinct.html#module-distopia.precinct">distopia.precinct (module)</a>
 </li>
@@ -131,6 +135,10 @@
       <li><a href="district.html#distopia.district.District">District (class in distopia.district)</a>
 </li>
       <li><a href="precinct.html#distopia.precinct.Precinct.district">district (distopia.precinct.Precinct attribute)</a>
+</li>
+      <li><a href="district.html#distopia.district.metrics.DistrictAggregateMetric">DistrictAggregateMetric (class in distopia.district.metrics)</a>
+</li>
+      <li><a href="district.html#distopia.district.metrics.DistrictHistogramAggregateMetric">DistrictHistogramAggregateMetric (class in distopia.district.metrics)</a>
 </li>
       <li><a href="district.html#distopia.district.metrics.DistrictMetric">DistrictMetric (class in distopia.district.metrics)</a>
 </li>
@@ -213,6 +221,8 @@
       <ul>
         <li><a href="district.html#distopia.district.metrics.DistrictMetric.name">(distopia.district.metrics.DistrictMetric attribute)</a>
 </li>
+        <li><a href="metrics.html#distopia.metrics.StateMetric.name">(distopia.metrics.StateMetric attribute)</a>
+</li>
         <li><a href="precinct.html#distopia.precinct.Precinct.name">(distopia.precinct.Precinct attribute)</a>
 </li>
         <li><a href="precinct.html#distopia.precinct.metrics.PrecinctMetric.name">(distopia.precinct.metrics.PrecinctMetric attribute)</a>
@@ -238,9 +248,13 @@
 </li>
       <li><a href="precinct.html#distopia.precinct.Precinct">Precinct (class in distopia.precinct)</a>
 </li>
+      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.precinct_colliders">precinct_colliders (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+      <li><a href="precinct.html#distopia.precinct.metrics.PrecinctCategory">PrecinctCategory (class in distopia.precinct.metrics)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.precinct_colliders">precinct_colliders (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+      <li><a href="precinct.html#distopia.precinct.metrics.PrecinctHistogram">PrecinctHistogram (class in distopia.precinct.metrics)</a>
 </li>
       <li><a href="precinct.html#distopia.precinct.metrics.PrecinctMetric">PrecinctMetric (class in distopia.precinct.metrics)</a>
 </li>
@@ -250,6 +264,8 @@
         <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.precincts">(distopia.mapping.voronoi.VoronoiMapping attribute)</a>
 </li>
       </ul></li>
+      <li><a href="precinct.html#distopia.precinct.metrics.PrecinctScalar">PrecinctScalar (class in distopia.precinct.metrics)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -257,6 +273,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.remove_fiducial">remove_fiducial() (distopia.mapping.voronoi.VoronoiMapping method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ros.html#distopia.app.ros.RosBridge">RosBridge (class in distopia.app.ros)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -273,6 +293,8 @@
       <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.set_precincts">set_precincts() (distopia.mapping.voronoi.VoronoiMapping method)</a>
 </li>
       <li><a href="mapping.html#distopia.mapping.voronoi.VoronoiMapping.sites">sites (distopia.mapping.voronoi.VoronoiMapping attribute)</a>
+</li>
+      <li><a href="metrics.html#distopia.metrics.StateMetric">StateMetric (class in distopia.metrics)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -310,10 +332,12 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="distopia.html">Distopia</a></li>
-<li class="toctree-l1"><a class="reference internal" href="precinct.html">Precinct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="precinct.html">Precinct Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="district.html">District</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mapping.html">Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="app.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ros.html">ROS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
 </ul>
 
