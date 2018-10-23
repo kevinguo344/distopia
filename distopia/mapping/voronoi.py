@@ -12,7 +12,10 @@ import time
 from threading import Thread, Lock
 import math
 import cProfile, pstats, io
-from queue import Queue
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 __all__ = ('VoronoiMapping', )
 
@@ -259,6 +262,18 @@ class VoronoiMapping(object):
         """
         x, y = map(int, self.fiducial_locations[fiducial])
         i = self.pixel_district_map[x, y]
+        return self._raw_districts[i]
+
+    def get_pos_district(self, pos):
+        """The district under the fiducial.
+
+        :param pos: position.
+        :return: The district under the position, or None if none.
+        """
+        x, y = map(int, pos)
+        i = self.pixel_district_map[x, y]
+        if i == 2 ** 8 - 1:
+            return None
         return self._raw_districts[i]
 
     def assign_precincts_to_districts(self, districts, pixel_district_map):

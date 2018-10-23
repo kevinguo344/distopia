@@ -15,10 +15,12 @@ import cProfile, pstats, io
 import numpy as np
 import json
 import csv
+import math
 from functools import cmp_to_key
 
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
+from kivy.uix.boxlayout import BoxLayout
 from kivy.app import App
 from kivy.graphics.vertex_instructions import Line, Point, Mesh
 from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
@@ -81,12 +83,32 @@ class VoronoiWidget(Widget):
 
     metric_selection_width = 200
 
-    def __init__(self, voronoi_mapping=None, table_mode=False,
-                 align_mat=None, screen_offset=(0, 0), ros_bridge=None,
-                 district_blocks_fid=None, focus_block_fid=0,
-                 focus_block_logical_id=0, district_metrics_fn=None,
-                 state_metrics_fn=None,
-                 metric_selection_width=200, **kwargs):
+    show_voronoi_boundaries = False
+
+    current_fid_id = None
+
+    focus_metrics = []
+
+    focus_metric_width = 100
+
+    focus_metric_height = 100
+
+    screen_size = (1920, 1080)
+
+    focus_region_width = 0
+
+    n_focus_rows = 0
+
+    n_focus_cols = 0
+
+    def __init__(
+        self, voronoi_mapping=None, table_mode=False, align_mat=None,
+        screen_offset=(0, 0), ros_bridge=None, district_blocks_fid=None,
+        focus_block_fid=0, focus_block_logical_id=0, district_metrics_fn=None,
+        state_metrics_fn=None, metric_selection_width=200,
+        show_voronoi_boundaries=False, focus_metrics=[],
+        focus_metric_width=100, focus_metric_height=100,
+            screen_size=(1920, 1080), **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
         self.ros_bridge = ros_bridge
@@ -94,6 +116,15 @@ class VoronoiWidget(Widget):
         self.focus_block_fid = focus_block_fid
         self.focus_block_logical_id = focus_block_logical_id
         self.metric_selection_width = metric_selection_width
+        self.show_voronoi_boundaries = show_voronoi_boundaries
+
+        self.focus_metrics = focus_metrics
+        self.focus_metric_width = focus_metric_width
+        self.focus_metric_height = focus_metric_height
+        self.screen_size = screen_size
+        self.n_focus_rows = rows = int(screen_size[1] // focus_metric_height)
+        self.n_focus_cols = cols = int(math.ceil(len(focus_metrics) / rows))
+        self.focus_region_width = cols * focus_metric_width
 
         self.fiducial_graphics = {}
         self.fiducials_color = {}
@@ -117,6 +148,8 @@ class VoronoiWidget(Widget):
     def show_precincts(self):
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
+            PushMatrix()
+            Translate(self.focus_metric_width, 0)
             for precinct in self.voronoi_mapping.precincts:
                 assert len(precinct.boundary) >= 6
                 tess = Tesselator()
@@ -136,87 +169,28 @@ class VoronoiWidget(Widget):
                 graphics.append(
                     Line(points=precinct.boundary, width=1))
                 precinct_graphics[precinct] = graphics
-
-    def add_fiducial(self, location, identity):
-        fiducial = self.voronoi_mapping.add_fiducial(location, identity)
-        if identity not in self.fiducials_color:
-            self.fiducials_color[identity] = next(self.colors)
-        return fiducial
-
-    def remove_fiducial(self, fiducial, location):
-        self.voronoi_mapping.remove_fiducial(fiducial)
-
-    def handle_focus_block(self, pos=None):
-        pass
+            PopMatrix()
 
     def on_touch_down(self, touch):
         if not self.table_mode:
-            return False
-
-        focus_id = self.focus_block_logical_id
-        blocks_fid = self.district_blocks_fid
-        if 'markerid' not in touch.profile or (
-                touch.fid not in blocks_fid and touch.fid != focus_id):
-            return False
-
-        pos = self.align_touch(touch.pos)
-
-        # handle focus block
-        if touch.fid == focus_id:
-            if self._has_focus:
-                return True
-            self.handle_focus_block(pos)
-            self._has_focus = touch
-            return True
-
-        logical_id = blocks_fid.index(touch.fid)
-        key = self.add_fiducial(pos, logical_id)
-
-        with self.canvas:
-            color = Color(rgba=(1, 1, 1, 1))
-            point = Point(points=pos, pointsize=7)
-
-        info = {'fid': touch.fid, 'fiducial_key': key, 'last_pos': pos,
-                'graphics': (color, point), 'logical_id': logical_id}
-        self.touches[touch.uid] = info
-
-        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
-        return True
+            return self.gui_touch_down(touch)
+        return self.fiducial_down(touch)
 
     def on_touch_move(self, touch):
-        if not self.table_mode or touch.uid not in self.touches:
+        if touch.uid not in self.touches:
             return False
 
-        info = self.touches[touch.uid]
-        pos = self.align_touch(touch.pos)
-        if info['last_pos'] == pos:
-            return True
-
-        info['last_pos'] = pos
-        info['graphics'][1].points = pos
-
-        self.voronoi_mapping.move_fiducial(info['fiducial_key'], pos)
-        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
-        return True
+        if self.table_mode:
+            return self.fiducial_move(touch)
+        return self.gui_touch_move(touch)
 
     def on_touch_up(self, touch):
+        if touch.uid not in self.touches:
+            return False
+
         if self.table_mode:
-            if touch.uid not in self.touches:
-                return False
-
-            info = self.touches[touch.uid]
-            self.canvas.remove(info['graphics'][0])
-            self.canvas.remove(info['graphics'][1])
-
-            self.remove_fiducial(
-                info['fiducial_key'], self.align_touch(touch.pos))
-            self.voronoi_mapping.request_reassignment(self.voronoi_callback)
-        else:
-            if not self.touch_mode_handle_up(touch):
-                return False
-
-            self.voronoi_mapping.request_reassignment(self.voronoi_callback)
-        return True
+            return self.fiducial_up(touch)
+        return self.gui_touch_up()
 
     def align_touch(self, pos):
         if self.align_mat is not None:
@@ -227,7 +201,165 @@ class VoronoiWidget(Widget):
         pos = pos[0] - x0, pos[1] - y0
         return pos
 
-    def touch_mode_handle_up(self, touch):
+    def handle_focus_block(self, pos):
+        assert self.focus_metrics
+        x, y = pos
+        if x < self.focus_region_width:
+            rows = self.n_focus_rows
+
+            metric = ''
+            if y < rows * self.focus_metric_height:
+                row = int(y / self.focus_metric_height)
+                col = int(x / self.focus_metric_width)
+                metric = self.focus_metrics[col * rows + row]
+            self.ros_bridge.update_tuio_focus(False, metric)
+        else:
+            district = self.voronoi_mapping.get_pos_district(
+                (x - self.focus_region_width, y))
+
+            # it's not on any district, send a no block present signal
+            if district is None:
+                self.ros_bridge.update_tuio_focus(False, '')
+            else:
+                self.ros_bridge.update_tuio_focus(True, district.identity)
+
+    def focus_block_down(self, touch, pos):
+        # there's already a focus block on the table
+        if self._has_focus or not self.focus_metrics:
+            return True
+        self._has_focus = touch
+
+        with self.canvas:
+            color = Color(rgba=(1, 0, 1, 1))
+            point = Point(points=pos, pointsize=7)
+
+        info = {'fid': touch.fid, 'last_pos': pos, 'graphics': (color, point),
+                'focus': True}
+        self.touches[touch.uid] = info
+
+        self.handle_focus_block(pos)
+        return True
+
+    def focus_block_move(self, touch, pos):
+        """Only called in table mode and if the touch has been seen before
+        and it is a focus block.
+        """
+        info = self.touches[touch.uid]
+        info['last_pos'] = pos
+        info['graphics'][1].points = pos
+
+        self.handle_focus_block(pos)
+        return True
+
+    def focus_block_up(self, touch):
+        """Only called in table mode and if the touch has been seen before
+        and it is a focus block.
+        """
+        info = self.touches[touch.uid]
+        for item in info['graphics']:
+            self.canvas.remove(item)
+
+        del self.touches[touch.uid]
+        self._has_focus = None
+
+        self.ros_bridge.update_tuio_focus(False, '')
+        return True
+
+    def fiducial_down(self, touch):
+        focus_id = self.focus_block_logical_id
+        blocks_fid = self.district_blocks_fid
+        if 'markerid' not in touch.profile or (
+                touch.fid not in blocks_fid and touch.fid != focus_id):
+            return False
+
+        x, y = pos = self.align_touch(touch.pos)
+
+        # handle focus block
+        if touch.fid == focus_id:
+            return self.focus_block_down(touch, pos)
+
+        with self.canvas:
+            color = Color(rgba=(1, 1, 1, 1))
+            point = Point(points=pos, pointsize=7)
+
+        logical_id = blocks_fid.index(touch.fid)
+        key = self.add_fiducial((x - self.focus_region_width, y), logical_id)
+
+        info = {'fid': touch.fid, 'fiducial_key': key, 'last_pos': pos,
+                'graphics': (color, point), 'logical_id': logical_id}
+        self.touches[touch.uid] = info
+
+        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
+        return True
+
+    def fiducial_move(self, touch):
+        """Only called in table mode and if the touch has been seen before.
+        """
+        info = self.touches[touch.uid]
+        x, y = pos = self.align_touch(touch.pos)
+        if info['last_pos'] == pos:
+            return True
+
+        if 'focus' in info:
+            return self.focus_block_move(touch, pos)
+
+        info['last_pos'] = pos
+        info['graphics'][1].points = pos
+
+        self.voronoi_mapping.move_fiducial(
+            info['fiducial_key'], (x - self.focus_region_width, y))
+        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
+        return True
+
+    def fiducial_up(self, touch):
+        """Only called in table mode and if the touch has been seen before.
+        """
+        info = self.touches[touch.uid]
+        if 'focus' in info:
+            return self.focus_block_up(touch)
+
+        del self.touches[touch.uid]
+        for item in info['graphics']:
+            self.canvas.remove(item)
+
+        x, y = self.align_touch(touch.pos)
+        self.remove_fiducial(
+            info['fiducial_key'], (x - self.focus_region_width, y))
+        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
+        return True
+
+    def gui_touch_down(self, touch):
+        x, y = pos = self.align_touch(touch.pos)
+
+        info = {'logical_id': self.current_fid_id, 'moved': False,
+                'fiducial_key': None}
+        self.touches[touch.uid] = info
+
+        for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
+            if ((x - x2) ** 2 + (y - y2) ** 2) ** .5 < 10:
+                info['fiducial_key'] = key
+                info['logical_id'] = self.voronoi_mapping.get_fiducial_ids()[
+                    key]
+                return True
+
+        fid_count = len(self.voronoi_mapping.get_fiducials())
+        if fid_count == len(self.district_blocks_fid):
+            return False
+
+        info['fiducial_key'] = key = self.add_fiducial(pos, fid_count)
+
+        with self.canvas:
+            color = Color(rgba=(1, 1, 1, 1))
+            point = Point(points=pos, pointsize=4)
+            self.fiducial_graphics[key] = color, point
+
+        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
+        return True
+
+    def gui_touch_move(self, touch):
+        pass
+
+    def gui_touch_up(self, touch):
         x, y = pos = self.align_touch(touch.pos)
 
         for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
@@ -236,6 +368,8 @@ class VoronoiWidget(Widget):
 
                 for item in self.fiducial_graphics.pop(key):
                     self.canvas.remove(item)
+
+                self.voronoi_mapping.request_reassignment(self.voronoi_callback)
                 return True
 
         fid_count = len(self.voronoi_mapping.get_fiducials())
@@ -248,7 +382,18 @@ class VoronoiWidget(Widget):
             color = Color(rgba=(1, 1, 1, 1))
             point = Point(points=pos, pointsize=4)
             self.fiducial_graphics[key] = color, point
+
+        self.voronoi_mapping.request_reassignment(self.voronoi_callback)
         return True
+
+    def add_fiducial(self, location, identity):
+        fiducial = self.voronoi_mapping.add_fiducial(location, identity)
+        if identity not in self.fiducials_color:
+            self.fiducials_color[identity] = next(self.colors)
+        return fiducial
+
+    def remove_fiducial(self, fiducial, location):
+        self.voronoi_mapping.remove_fiducial(fiducial)
 
     def voronoi_callback(self, *largs):
         def _callback(dt):
@@ -297,12 +442,16 @@ class VoronoiWidget(Widget):
             self.canvas.remove(item)
         self.district_graphics = []
 
-        with self.canvas:
-            self.district_graphics.append(Color(1, 1, 0, 1))
-            for district in districts:
-                self.district_graphics.append(
-                    Line(points=district.boundary + district.boundary[:2],
-                         width=2))
+        if self.show_voronoi_boundaries:
+            PushMatrix()
+            Translate(self.focus_metric_width, 0)
+            with self.canvas:
+                self.district_graphics.append(Color(1, 1, 0, 1))
+                for district in districts:
+                    self.district_graphics.append(
+                        Line(points=district.boundary + district.boundary[:2],
+                             width=2))
+            PopMatrix()
 
 
 class VoronoiApp(App):
@@ -343,6 +492,18 @@ class VoronoiApp(App):
 
     metric_selection_width = 200
 
+    ros_host = 'localhost'
+
+    ros_port = 9090
+
+    show_voronoi_boundaries = False
+
+    focus_metrics = []
+
+    focus_metric_width = 100
+
+    focus_metric_height = 100
+
     def create_district_metrics(self, districts):
         for district in districts:
             if 'demographics' in self.metrics:
@@ -365,7 +526,7 @@ class VoronoiApp(App):
             'County_Boundaries_24K', 'demographics.csv')
         with open(fname) as fh:
             reader = csv.reader(fh)
-            header = next(reader)
+            header = next(reader)[1:]
 
             data = {}
             for row in reader:
@@ -423,7 +584,8 @@ class VoronoiApp(App):
                 'table_mode', 'alignment_filename', 'screen_offset',
                 'show_precinct_id', 'focus_block_fid',
                 'focus_block_logical_id', 'district_blocks_fid', 'use_ros',
-                'metrics']
+                'metrics', 'ros_host', 'ros_port', 'show_voronoi_boundaries',
+                'focus_metrics', 'focus_metric_width', 'focus_metric_height']
 
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
@@ -454,8 +616,7 @@ class VoronoiApp(App):
 
         self.create_voronoi()
         self.load_precinct_metrics()
-        if self.use_ros:
-            self.ros_bridge = RosBridge()
+
         widget = VoronoiWidget(
             voronoi_mapping=self.voronoi_mapping,
             table_mode=self.table_mode, align_mat=mat,
@@ -465,7 +626,26 @@ class VoronoiApp(App):
             focus_block_logical_id=self.focus_block_logical_id,
             district_metrics_fn=self.create_district_metrics,
             state_metrics_fn=self.create_state_metrics,
-            metric_selection_width=self.metric_selection_width)
+            metric_selection_width=self.metric_selection_width,
+            show_voronoi_boundaries=self.show_voronoi_boundaries,
+            focus_metrics=self.focus_metrics, screen_size=self.screen_size,
+            focus_metric_height=self.focus_metric_height,
+            focus_metric_width=self.focus_metric_width)
+
+        if self.use_ros:
+            box = BoxLayout()
+            voronoi_widget = widget
+            err = Label(text='No ROS bridge. Please set use_ros to False')
+            widget = box
+            box.add_widget(err)
+
+            def enable_widget():
+                box.remove_widget(err)
+                box.add_widget(voronoi_widget)
+
+            self.ros_bridge = RosBridge(
+                host=self.ros_host, port=self.ros_port,
+                ready_callback=enable_widget)
 
         if self.show_precinct_id:
             self.show_precinct_labels(widget)

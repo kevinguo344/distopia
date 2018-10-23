@@ -1,11 +1,24 @@
 from setuptools import setup, find_packages
 from distutils.extension import Extension
 from Cython.Build import cythonize
+from Cython.Distutils import build_ext
 import distopia
-import numpy as np
 
 with open('README.md') as fh:
     long_description = fh.read()
+
+
+class CustomBuildExtCommand(build_ext):
+    """build_ext command for use when numpy headers are needed.
+    https://stackoverflow.com/questions/2379898/make-distutils-look-for-
+    numpy-header-files-in-the-correct-place
+    """
+
+    def run(self):
+        import numpy
+        self.include_dirs.append(numpy.get_include())
+        build_ext.run(self)
+
 
 setup(
     name='Distopia',
@@ -23,9 +36,9 @@ setup(
                  'Programming Language :: Python :: 3.7',
                  'Intended Audience :: Developers'],
     packages=find_packages(),
+    cmdclass={'build_ext': CustomBuildExtCommand},
     ext_modules=cythonize([Extension(
-        "distopia.mapping._voronoi", ["distopia/mapping/_voronoi.pyx"],
-        include_dirs=[np.get_include()])]),
+        "distopia.mapping._voronoi", ["distopia/mapping/_voronoi.pyx"])]),
     install_requires=['pytest', 'scipy', 'pyshp', 'numpy', 'pyproj', 'oscpy',
                       'matplotlib', 'Cython', 'roslibpy'],
     package_data={'distopia': ['data/*', ]},

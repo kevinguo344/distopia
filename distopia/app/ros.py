@@ -6,7 +6,10 @@ Publishes the state of the system to ROS.
 """
 
 from threading import Thread
-from queue import Queue
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 import json
 import roslibpy
 import logging
@@ -51,20 +54,6 @@ class RosBridge(object):
         tuio_topic.advertise()
         logging.info('Started ros-bridge publishers')
 
-        import time
-        time.sleep(5)
-        def echo(msg):
-            print(msg)
-        def echo2(msg):
-            print(msg)
-        designs_topic2 = roslibpy.Topic(
-            self.ros, '/evaluated_designs', 'std_msgs/String')
-        blocks_topic2 = roslibpy.Topic(
-            self.ros, '/blocks', 'std_msgs/String')
-        designs_topic2.subscribe(echo)
-        blocks_topic2.subscribe(echo2)
-        #tuio_topic.subscribe(echo)
-
         self._publisher_thread_queue = Queue()
         self._publisher_thread = thread = Thread(
             target=self.publisher_thread_function,
@@ -78,8 +67,6 @@ class RosBridge(object):
         if self._publisher_thread is not None:
             self._publisher_thread_queue.put(('eof', None))
             self._publisher_thread.join()
-        elif self.ros is not None:
-            self.ros.terminate()
 
     def update_tuio_focus(self, focus_district, focus_param):
         self._publisher_thread_queue.put(

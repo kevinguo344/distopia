@@ -47,7 +47,8 @@ class DistrictHistogramAggregateMetric(DistrictAggregateMetric):
 
     def compute(self):
         name = self.name
-        assert self.district.precincts
+        if not self.district.precincts:
+            return
 
         self.labels = self.district.precincts[0].metrics[name].labels
         precinct_metrics = [
