@@ -82,7 +82,8 @@
 
     <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">:</span>
+            <span class="k">return</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">labels</span>
         <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="p">[</span>

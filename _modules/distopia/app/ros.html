@@ -41,7 +41,10 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
-<span class="kn">from</span> <span class="nn">queue</span> <span class="k">import</span> <span class="n">Queue</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">queue</span> <span class="k">import</span> <span class="n">Queue</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">Queue</span> <span class="k">import</span> <span class="n">Queue</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">roslibpy</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -86,20 +89,6 @@
         <span class="n">tuio_topic</span><span class="o">.</span><span class="n">advertise</span><span class="p">()</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Started ros-bridge publishers&#39;</span><span class="p">)</span>
 
-        <span class="kn">import</span> <span class="nn">time</span>
-        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">echo</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">echo2</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-        <span class="n">designs_topic2</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/evaluated_designs&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
-        <span class="n">blocks_topic2</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Topic</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="p">,</span> <span class="s1">&#39;/blocks&#39;</span><span class="p">,</span> <span class="s1">&#39;std_msgs/String&#39;</span><span class="p">)</span>
-        <span class="n">designs_topic2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">echo</span><span class="p">)</span>
-        <span class="n">blocks_topic2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">echo2</span><span class="p">)</span>
-        <span class="c1">#tuio_topic.subscribe(echo)</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span> <span class="o">=</span> <span class="n">thread</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span>
             <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">publisher_thread_function</span><span class="p">,</span>
@@ -113,8 +102,6 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s1">&#39;eof&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ros</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">update_tuio_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
