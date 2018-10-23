@@ -55,3 +55,17 @@ class DistrictHistogramAggregateMetric(DistrictAggregateMetric):
             p.metrics[name].data for p in self.district.precincts]
 
         self.data = np.sum(np.array(precinct_metrics), axis=0).tolist()
+
+
+class DistrictScalarAggregateMetric(DistrictAggregateMetric):
+
+    value = 0
+
+    def compute(self):
+        name = self.name
+        if not self.district.precincts:
+            return
+
+        precinct_metrics = [
+            p.metrics[name].value for p in self.district.precincts]
+        self.value = np.sum(precinct_metrics)

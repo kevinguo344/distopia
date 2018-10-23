@@ -12,8 +12,27 @@
   ],
   "focus_block_fid": 8,
   "focus_block_logical_id": 8,
+  "focus_metric_height": 100,
+  "focus_metric_width": 100,
+  "focus_metrics": [
+    "age",
+    "education",
+    "income",
+    "occupation",
+    "population",
+    "projected_votes",
+    "race",
+    "sex"
+  ],
   "metrics": [
-    "demographics"
+    "age",
+    "education",
+    "income",
+    "occupation",
+    "population",
+    "projected_votes",
+    "race",
+    "sex"
   ],
   "ros_host": "localhost",
   "ros_port": 9090,
@@ -26,13 +45,8 @@
     1080
   ],
   "show_precinct_id": false,
+  "show_voronoi_boundaries": false,
   "table_mode": false,
   "use_county_dataset": true,
-  "use_ros": false,
-  "show_voronoi_boundaries": false,
-  "focus_metrics": [
-    "demographics"
-  ],
-  "focus_metric_width": 100,
-  "focus_metric_height": 100
+  "use_ros": false
 }
