@@ -466,7 +466,7 @@ class VoronoiWidget(Widget):
 
         label = self.fiducial_graphics[key] = Label(
             text=str(self.current_fid_id), center=tuple(map(float, pos)),
-            font_size='20sp', )
+            font_size='20sp')
         self.add_widget(label)
         info['fiducial_key'] = key
         info['moved'] = True
@@ -542,7 +542,7 @@ class VoronoiWidget(Widget):
     def add_fiducial(self, location, identity):
         fiducial = self.voronoi_mapping.add_fiducial(location, identity)
         if identity not in self.fiducials_color:
-            self.fiducials_color[identity] = next(self.colors)
+            self.fiducials_color[identity] = list(next(self.colors))
         return fiducial
 
     def remove_fiducial(self, fiducial, location):
@@ -563,7 +563,7 @@ class VoronoiWidget(Widget):
         self.district_graphics = []
 
     def process_voronoi_output(
-            self, districts, fiducial_identity, fiducial_pos,
+            self, districts, fiducial_identity, fiducial_pos, error=[],
             post_callback=None, largs=(),
             data_is_old=False):
         if data_is_old:
@@ -572,24 +572,28 @@ class VoronoiWidget(Widget):
         if post_callback is not None:
             post_callback(*largs)
 
-        self.district_metrics_fn(districts)
-        state_metrics = self.state_metrics_fn(districts)
+        if not error:
+            self.district_metrics_fn(districts)
+            state_metrics = self.state_metrics_fn(districts)
 
-        fid_ids = [self.district_blocks_fid[i] for i in fiducial_identity]
-        if self.ros_bridge is not None:
-            self.ros_bridge.update_voronoi(
-                fiducial_pos, fid_ids, fiducial_identity, districts,
-                state_metrics)
-        if not districts:
-            self.clear_voronoi()
-            return
+            fid_ids = [self.district_blocks_fid[i] for i in fiducial_identity]
+            if self.ros_bridge is not None:
+                self.ros_bridge.update_voronoi(
+                    fiducial_pos, fid_ids, fiducial_identity, districts,
+                    state_metrics)
+            if not districts:
+                self.clear_voronoi()
+                return
 
-        districts = self.voronoi_mapping.districts
         colors = self.fiducials_color
         for district in districts:
             color = colors[district.identity]
             for precinct in district.precincts:
-                self.precinct_graphics[precinct][0].rgb = color
+                self.precinct_graphics[precinct][0].rgba = color + [1., ]
+
+        if error:
+            for precinct in error:
+                self.precinct_graphics[precinct][0].a = .3
 
         for item in self.district_graphics:
             self.canvas.remove(item)
@@ -715,6 +719,18 @@ class VoronoiApp(App):
                 precinct.metrics['demographics'] = PrecinctScalar(
                     name=name, value=data[name])
 
+    def load_precinct_adjacency(self):
+        assert self.use_county_dataset
+        fname = os.path.join(
+            os.path.dirname(distopia.__file__), 'data', 'county_adjacency.json')
+
+        with open(fname, 'r') as fh:
+            counties = json.load(fh)
+
+        precincts = self.precincts
+        for i, neighbours in counties.items():
+            precincts[int(i)].neighbours = [precincts[p] for p in neighbours]
+
     def create_state_metrics(self, districts):
         return []
 
@@ -794,6 +810,7 @@ class VoronoiApp(App):
 
         self.create_voronoi()
         self.load_precinct_metrics()
+        self.load_precinct_adjacency()
 
         widget = VoronoiWidget(
             voronoi_mapping=self.voronoi_mapping,

@@ -166,11 +166,10 @@ cdef class PolygonCollider(object):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    def mark_pixels(self, np.ndarray[np.uint8_t, ndim=2] table, int w, int h, np.uint8_t value):
-        cdef int x, y, x0, y0, x1, y1, x_offset, y_offset
-        if self.cspace is NULL:
-            raise TypeError('This method can only be called if cache was True')
-
+    cdef int _mark_pixels(
+            self, int w, int h, int* _x0, int* _y0, int* _x1, int* _y1,
+            int* _x_offset, int* _y_offset):
+        cdef int x0, y0, x1, y1, x_offset, y_offset
         # this assumes that the table is the x, y coordinates which is between
         # 0 to w or h
         x_offset = int(floor(self.min_x))
@@ -200,6 +199,39 @@ cdef class PolygonCollider(object):
                 y1 = y0
             else:
                 y1 = min(h, self.height + y_offset) + y0
+
+        _x0[0] = x0
+        _y0[0] = y0
+        _x1[0] = x1
+        _y1[0] = y1
+        _x_offset[0] = x_offset
+        _y_offset[0] = y_offset
+        return 0
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def mark_pixels_u8(self, np.ndarray[np.uint8_t, ndim=2] table, int w, int h,
+                       np.uint8_t value):
+        cdef int x, y, x0, y0, x1, y1, x_offset, y_offset
+        if self.cspace is NULL:
+            raise TypeError('This method can only be called if cache was True')
+
+        self._mark_pixels(w, h, &x0, &y0, &x1, &y1, &x_offset, &y_offset)
+
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                if self.cspace[y * self.width + x]:
+                    table[x + x_offset, y + y_offset] = value
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def mark_pixels_u16(
+            self, np.ndarray[np.uint16_t, ndim=2] table, int w, int h, np.uint16_t value):
+        cdef int x, y, x0, y0, x1, y1, x_offset, y_offset
+        if self.cspace is NULL:
+            raise TypeError('This method can only be called if cache was True')
+
+        self._mark_pixels(w, h, &x0, &y0, &x1, &y1, &x_offset, &y_offset)
 
         for x in range(x0, x1):
             for y in range(y0, y1):

@@ -5,6 +5,8 @@ Precinct
 :class:`Precinct` defines a precinct and it's immutable data.
 """
 
+from collections import deque, defaultdict
+
 __all__ = ('Precinct', )
 
 
@@ -56,3 +58,25 @@ class Precinct(object):
         self.name = name
         self.neighbours = []
         self.metrics = {}
+
+    @classmethod
+    def find_disconnected_precincts(cls, precincts, district_map):
+        seen = {precincts[0]}
+        stack = deque([precincts[0]])
+        district = district_map[precincts[0]]
+
+        for precinct in precincts:
+            assert district_map[precinct] is district
+
+        while stack:
+            p = stack.popleft()
+
+            for neighbor in p.neighbours:
+                if neighbor not in seen and district_map[neighbor] is district:
+                    stack.appendleft(neighbor)
+                    seen.add(neighbor)
+
+        unseen = [p for p in precincts if p not in seen]
+        if unseen:
+            unseen.append(precincts[0])
+        return unseen
