@@ -40,6 +40,8 @@
 <span class="sd">:class:`Precinct` defines a precinct and it&#39;s immutable data.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">deque</span><span class="p">,</span> <span class="n">defaultdict</span>
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Precinct&#39;</span><span class="p">,</span> <span class="p">)</span>
 
 
@@ -90,7 +92,29 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">=</span> <span class="n">boundary</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">neighbours</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span> <span class="o">=</span> <span class="p">{}</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">find_disconnected_precincts</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">precincts</span><span class="p">,</span> <span class="n">district_map</span><span class="p">):</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="p">{</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+        <span class="n">stack</span> <span class="o">=</span> <span class="n">deque</span><span class="p">([</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">district</span> <span class="o">=</span> <span class="n">district_map</span><span class="p">[</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">precinct</span> <span class="ow">in</span> <span class="n">precincts</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">district_map</span><span class="p">[</span><span class="n">precinct</span><span class="p">]</span> <span class="ow">is</span> <span class="n">district</span>
+
+        <span class="k">while</span> <span class="n">stack</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">neighbor</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">neighbours</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">neighbor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span> <span class="ow">and</span> <span class="n">district_map</span><span class="p">[</span><span class="n">neighbor</span><span class="p">]</span> <span class="ow">is</span> <span class="n">district</span><span class="p">:</span>
+                    <span class="n">stack</span><span class="o">.</span><span class="n">appendleft</span><span class="p">(</span><span class="n">neighbor</span><span class="p">)</span>
+                    <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">neighbor</span><span class="p">)</span>
+
+        <span class="n">unseen</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">precincts</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">unseen</span><span class="p">:</span>
+            <span class="n">unseen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">unseen</span></div>
 </pre></div>
 
           </div>

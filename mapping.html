@@ -64,16 +64,23 @@
 
 <dl class="method">
 <dt id="distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts">
-<code class="descname">assign_precincts_to_districts</code><span class="sig-paren">(</span><em>districts</em>, <em>pixel_district_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.assign_precincts_to_districts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts" title="Permalink to this definition">¶</a></dt>
+<code class="descname">assign_precincts_to_districts</code><span class="sig-paren">(</span><em>n_districts</em>, <em>pixel_district_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.assign_precincts_to_districts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Uses the pre-computed precinct and district maps and assigns
 all the precincts to districts.</p>
+<p>Returns list of precincts, per district. Indices correspond with the
+district identity index in <cite>unique_ids</cite> as filled into
+pixel_district_map.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels">
-<code class="descname">compute_district_pixels</code><span class="sig-paren">(</span><em>fiducials</em>, <em>fiducials_identity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.compute_district_pixels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels" title="Permalink to this definition">¶</a></dt>
+<code class="descname">compute_district_pixels</code><span class="sig-paren">(</span><em>fiducials</em>, <em>fiducials_identity</em>, <em>unique_ids</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.compute_district_pixels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.compute_district_pixels" title="Permalink to this definition">¶</a></dt>
 <dd><p>Computes the assignment of pixels to districts and creates the
 associated districts.</p>
+<p>fiducials and fiducials_identity must be sorted such that they
+correspond to each other. All ids must be in unique ids.
+pixel_district_map is filled in with the index of the district
+identity in unique_ids to make it 0-n-1.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -87,22 +94,6 @@ associated districts.</p>
 <code class="descname">fiducial_locations</code><em class="property"> = {}</em><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.fiducial_locations" title="Permalink to this definition">¶</a></dt>
 <dd><p>dict of tuples, each containing the <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y)</span></code> coordinates of the
 fiducial at that key.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="distopia.mapping.voronoi.VoronoiMapping.get_fiducial_district">
-<code class="descname">get_fiducial_district</code><span class="sig-paren">(</span><em>fiducial</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/mapping/voronoi.html#VoronoiMapping.get_fiducial_district"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.mapping.voronoi.VoronoiMapping.get_fiducial_district" title="Permalink to this definition">¶</a></dt>
-<dd><p>The district under the fiducial.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fiducial</strong> – <code class="docutils literal notranslate"><span class="pre">fiducial</span></code> ID as returned by <a class="reference internal" href="#distopia.mapping.voronoi.VoronoiMapping.add_fiducial" title="distopia.mapping.voronoi.VoronoiMapping.add_fiducial"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_fiducial()</span></code></a>.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The district under the fiducial.</td>
-</tr>
-</tbody>
-</table>
 </dd></dl>
 
 <dl class="method">
