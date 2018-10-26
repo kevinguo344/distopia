@@ -91,6 +91,37 @@ class VoronoiMapping(object):
             target=self.voronoi_thread_function)
         thread.start()
 
+    def apply_voronoi(self):
+        """Not thread safe."""
+        fiducials = dict(self.fiducial_locations)
+        fiducial_ids = self.fiducial_ids
+
+        if len(fiducials) <= 3:
+            return []
+
+        fiducial_keys = list(fiducials.keys())
+        fiducial_pos = [fiducials[key] for key in fiducial_keys]
+        fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
+        unique_ids = list(sorted(set(fiducial_identity)))
+
+        pixel_district_map = self.compute_district_pixels(
+            np.asarray(fiducial_pos), fiducial_identity, unique_ids)
+        precinct_assignment = self.assign_precincts_to_districts(
+            len(unique_ids), pixel_district_map)
+        districts, error = self.create_districts_from_assignment(
+            precinct_assignment, unique_ids)
+        if error:
+            return []
+
+        self.set_districts_boundary(districts)
+
+        self.districts = districts
+        self.pixel_district_map = pixel_district_map
+        for district, precincts in zip(districts, precinct_assignment):
+            district.assign_precincts(precincts)
+
+        return districts
+
     def post_thread_computation_callback(
             self, districts, precinct_assignment, pixel_district_map):
         self.districts = districts

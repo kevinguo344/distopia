@@ -700,7 +700,7 @@ class VoronoiApp(App):
 
             for precinct, record in zip(self.precincts, geo_data.records):
                 name = names[record[3]]
-                precinct.metrics['demographics'] = PrecinctHistogram(
+                precinct.metrics[name] = PrecinctHistogram(
                     name=name, labels=header, data=data[name])
 
         name = 'income'
@@ -716,7 +716,7 @@ class VoronoiApp(App):
 
             for precinct, record in zip(self.precincts, geo_data.records):
                 name = names[record[3]]
-                precinct.metrics['demographics'] = PrecinctScalar(
+                precinct.metrics[name] = PrecinctScalar(
                     name=name, value=data[name])
 
     def load_precinct_adjacency(self):
