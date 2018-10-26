@@ -126,6 +126,37 @@
             <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">voronoi_thread_function</span><span class="p">)</span>
         <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
+<div class="viewcode-block" id="VoronoiMapping.apply_voronoi"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.apply_voronoi">[docs]</a>    <span class="k">def</span> <span class="nf">apply_voronoi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Not thread safe.&quot;&quot;&quot;</span>
+        <span class="n">fiducials</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="p">)</span>
+        <span class="n">fiducial_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fiducials</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">fiducial_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">fiducials</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">fiducial_pos</span> <span class="o">=</span> <span class="p">[</span><span class="n">fiducials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fiducial_keys</span><span class="p">]</span>
+        <span class="n">fiducial_identity</span> <span class="o">=</span> <span class="p">[</span><span class="n">fiducial_ids</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fiducial_keys</span><span class="p">]</span>
+        <span class="n">unique_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">fiducial_identity</span><span class="p">)))</span>
+
+        <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_district_pixels</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fiducial_pos</span><span class="p">),</span> <span class="n">fiducial_identity</span><span class="p">,</span> <span class="n">unique_ids</span><span class="p">)</span>
+        <span class="n">precinct_assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assign_precincts_to_districts</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">unique_ids</span><span class="p">),</span> <span class="n">pixel_district_map</span><span class="p">)</span>
+        <span class="n">districts</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_districts_from_assignment</span><span class="p">(</span>
+            <span class="n">precinct_assignment</span><span class="p">,</span> <span class="n">unique_ids</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_districts_boundary</span><span class="p">(</span><span class="n">districts</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="n">districts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pixel_district_map</span> <span class="o">=</span> <span class="n">pixel_district_map</span>
+        <span class="k">for</span> <span class="n">district</span><span class="p">,</span> <span class="n">precincts</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">):</span>
+            <span class="n">district</span><span class="o">.</span><span class="n">assign_precincts</span><span class="p">(</span><span class="n">precincts</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">districts</span></div>
+
     <span class="k">def</span> <span class="nf">post_thread_computation_callback</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span> <span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">,</span> <span class="n">pixel_district_map</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="n">districts</span>
