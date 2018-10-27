@@ -16,8 +16,6 @@ class VoronoiAgent(object):
 
     voronoi_mapping = None
 
-    ros_bridge = None
-
     use_county_dataset = True
 
     geo_data = None
@@ -26,39 +24,7 @@ class VoronoiAgent(object):
 
     screen_size = (1900, 800)
 
-    table_mode = False
-
-    _profiler = None
-
-    alignment_filename = 'alignment.txt'
-
-    screen_offset = 0, 0
-
-    show_precinct_id = False
-
-    district_blocks_fid = [0, 1, 2, 3, 4, 5, 6, 7]
-
-    focus_block_fid = 8
-
-    focus_block_logical_id = 8
-
-    use_ros = False
-
     metrics = ['demographics', ]
-
-    metric_selection_width = 200
-
-    ros_host = 'localhost'
-
-    ros_port = 9090
-
-    show_voronoi_boundaries = False
-
-    focus_metrics = []
-
-    focus_metric_width = 100
-
-    focus_metric_height = 100
 
     data_loader = None
 
@@ -100,9 +66,9 @@ class VoronoiAgent(object):
                     data[row[0]] = list(map(float, row[1:]))
 
             for precinct, record in zip(self.precincts, geo_data.records):
-                name = names[record[3]]
+                precinct_name = names[record[3]]
                 precinct.metrics[name] = PrecinctHistogram(
-                    name=name, labels=header, data=data[name])
+                    name=name, labels=header, data=data[precinct_name])
 
         name = 'income'
         if name in self.metrics:
@@ -116,9 +82,9 @@ class VoronoiAgent(object):
                     data[row[0]] = float(row[1])
 
             for precinct, record in zip(self.precincts, geo_data.records):
-                name = names[record[3]]
+                precinct_name = names[record[3]]
                 precinct.metrics[name] = PrecinctScalar(
-                    name=name, value=data[name])
+                    name=name, value=data[precinct_name])
 
     def load_precinct_adjacency(self):
         assert self.use_county_dataset
@@ -168,27 +134,11 @@ class VoronoiAgent(object):
         vor.set_precincts(precincts)
 
     def load_config(self):
-        keys = ['use_county_dataset', 'screen_size',
-                'table_mode', 'alignment_filename', 'screen_offset',
-                'show_precinct_id', 'focus_block_fid',
-                'focus_block_logical_id', 'district_blocks_fid', 'use_ros',
-                'metrics', 'ros_host', 'ros_port', 'show_voronoi_boundaries',
-                'focus_metrics', 'focus_metric_width', 'focus_metric_height']
-
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
-        if not os.path.exists(fname):
-            config = {key: getattr(self, key) for key in keys}
-            with open(fname, 'w') as fp:
-                json.dump(config, fp, indent=2, sort_keys=True)
-
         with open(fname, 'r') as fp:
             for key, val in json.load(fp).items():
                 setattr(self, key, val)
-
-        config = {key: getattr(self, key) for key in keys}
-        with open(fname, 'w') as fp:
-            json.dump(config, fp, indent=2, sort_keys=True)
 
     def load_data(self):
         """Builds the GUI.
@@ -200,11 +150,15 @@ class VoronoiAgent(object):
 
     def compute_voronoi_metrics(self, fiducials):
         vor = self.voronoi_mapping
+        keys = []
         for fid_id, locations in fiducials.items():
             for location in locations:
-                vor.add_fiducial(location, fid_id)
+                keys.append(vor.add_fiducial(location, fid_id))
 
         districts = vor.apply_voronoi()
+        if not districts:
+            return [], []
+
         self.create_district_metrics(districts)
         state_mets = self.create_state_metrics(districts)
 
@@ -218,16 +172,25 @@ class VoronoiAgent(object):
             district.compute_metrics()
             district_metrics[district.identity] = list(district.metrics.values())
 
+        for key in keys:
+            vor.remove_fiducial(key)
+
         return state_metrics, district_metrics
 
 
 if __name__ == '__main__':
+    import time
     agent = VoronoiAgent()
     agent.load_data()
     print('data loaded')
-    print(agent.compute_voronoi_metrics(
-        {0: [(251., 258.)],
-         1: [(751., 257.)],
-         2: [(252., 756.)],
-         3: [(752., 755.)]}))
-    print('dead')
+
+    t = [0, ] * 10
+    for i in range(len(t)):
+        ts = time.clock()
+        agent.compute_voronoi_metrics(
+            {0: [(250., 250.)],
+             1: [(750., 250.)],
+             2: [(250., 750.)],
+             3: [(750, 750)]})
+        t[i] = time.clock() - ts
+    print('done in {} - {}'.format(min(t), max(t)))

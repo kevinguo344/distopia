@@ -118,8 +118,6 @@ class VoronoiWidget(Widget):
 
     state_metrics_fn = None
 
-    metric_selection_width = 200
-
     show_voronoi_boundaries = False
 
     current_fid_id = None
@@ -146,7 +144,7 @@ class VoronoiWidget(Widget):
         self, voronoi_mapping=None, table_mode=False, align_mat=None,
         screen_offset=(0, 0), ros_bridge=None, district_blocks_fid=None,
         focus_block_fid=0, focus_block_logical_id=0, district_metrics_fn=None,
-        state_metrics_fn=None, metric_selection_width=200,
+        state_metrics_fn=None,
         show_voronoi_boundaries=False, focus_metrics=[],
         focus_metric_width=100, focus_metric_height=100,
             screen_size=(1920, 1080), **kwargs):
@@ -156,7 +154,6 @@ class VoronoiWidget(Widget):
         self.district_blocks_fid = district_blocks_fid
         self.focus_block_fid = focus_block_fid
         self.focus_block_logical_id = focus_block_logical_id
-        self.metric_selection_width = metric_selection_width
         self.show_voronoi_boundaries = show_voronoi_boundaries
 
         self.focus_metrics = focus_metrics
@@ -647,8 +644,6 @@ class VoronoiApp(App):
 
     metrics = ['demographics', ]
 
-    metric_selection_width = 200
-
     ros_host = 'localhost'
 
     ros_port = 9090
@@ -699,9 +694,9 @@ class VoronoiApp(App):
                     data[row[0]] = list(map(float, row[1:]))
 
             for precinct, record in zip(self.precincts, geo_data.records):
-                name = names[record[3]]
+                precinct_name = names[record[3]]
                 precinct.metrics[name] = PrecinctHistogram(
-                    name=name, labels=header, data=data[name])
+                    name=name, labels=header, data=data[precinct_name])
 
         name = 'income'
         if name in self.metrics:
@@ -715,9 +710,9 @@ class VoronoiApp(App):
                     data[row[0]] = float(row[1])
 
             for precinct, record in zip(self.precincts, geo_data.records):
-                name = names[record[3]]
+                precinct_name = names[record[3]]
                 precinct.metrics[name] = PrecinctScalar(
-                    name=name, value=data[name])
+                    name=name, value=data[precinct_name])
 
     def load_precinct_adjacency(self):
         assert self.use_county_dataset
@@ -754,6 +749,7 @@ class VoronoiApp(App):
             geo_data.smooth_vertices()
 
         self.voronoi_mapping = vor = VoronoiMapping()
+        vor.start_processing_thread()
         vor.screen_size = self.screen_size
         self.precincts = precincts = []
 
@@ -767,9 +763,12 @@ class VoronoiApp(App):
         vor.set_precincts(precincts)
 
     def show_precinct_labels(self, widget):
+        offset = widget.focus_region_width
         for i, precinct in enumerate(self.precincts):
+            x, y = precinct.location
+            x += offset
             label = Label(
-                text=str(precinct.identity), center=precinct.location,
+                text=str(precinct.identity), center=(x, y),
                 font_size=20)
             widget.add_widget(label)
 
@@ -821,7 +820,6 @@ class VoronoiApp(App):
             focus_block_logical_id=self.focus_block_logical_id,
             district_metrics_fn=self.create_district_metrics,
             state_metrics_fn=self.create_state_metrics,
-            metric_selection_width=self.metric_selection_width,
             show_voronoi_boundaries=self.show_voronoi_boundaries,
             focus_metrics=self.focus_metrics, screen_size=self.screen_size,
             focus_metric_height=self.focus_metric_height,

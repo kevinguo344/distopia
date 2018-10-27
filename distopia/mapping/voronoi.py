@@ -87,6 +87,8 @@ class VoronoiMapping(object):
         self.fiducial_ids = {}
         self.thread_lock = Lock()
         self._thread_queue = Queue()
+
+    def start_processing_thread(self):
         self._thread = thread = Thread(
             target=self.voronoi_thread_function)
         thread.start()
@@ -204,8 +206,10 @@ class VoronoiMapping(object):
             self._profiler.disable()
 
     def stop_thread(self):
-        self._thread_queue.put('eof')
-        self._thread.join()
+        if self._thread is not None:
+            self._thread_queue.put('eof')
+            self._thread.join()
+        self._thread = None
 
     def request_reassignment(
             self, callback, ignore_if_scheduled=True,
@@ -506,7 +510,11 @@ class VoronoiMapping(object):
             if direction is None:
                 continue
 
-            slope = (y2 - y1) / (x2 - x1)
+            if math.isclose(x1, x2):
+                slope = math.inf
+            else:
+                slope = (y2 - y1) / (x2 - x1)
+
             offset = y1 - slope * x1
             # test if it intersects with top or bottom of screen
             if math.isclose(slope, 0):
