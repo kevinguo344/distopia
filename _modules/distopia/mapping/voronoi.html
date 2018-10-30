@@ -40,7 +40,7 @@
 <span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="k">import</span> <span class="n">Voronoi</span>
 <span class="kn">from</span> <span class="nn">distopia.district</span> <span class="k">import</span> <span class="n">District</span>
 <span class="kn">from</span> <span class="nn">distopia.precinct</span> <span class="k">import</span> <span class="n">Precinct</span>
-<span class="kn">from</span> <span class="nn">distopia.mapping._voronoi</span> <span class="k">import</span> <span class="n">PolygonCollider</span>
+<span class="kn">from</span> <span class="nn">distopia.mapping._voronoi</span> <span class="k">import</span> <span class="n">PolygonCollider</span><span class="p">,</span> <span class="n">fill_voronoi_diagram</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -131,7 +131,7 @@
 <div class="viewcode-block" id="VoronoiMapping.apply_voronoi"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.apply_voronoi">[docs]</a>    <span class="k">def</span> <span class="nf">apply_voronoi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Not thread safe.&quot;&quot;&quot;</span>
         <span class="n">fiducials</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="p">)</span>
-        <span class="n">fiducial_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span>
+        <span class="n">fiducial_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fiducials</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
@@ -141,6 +141,11 @@
         <span class="n">fiducial_identity</span> <span class="o">=</span> <span class="p">[</span><span class="n">fiducial_ids</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fiducial_keys</span><span class="p">]</span>
         <span class="n">unique_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">fiducial_identity</span><span class="p">)))</span>
 
+        <span class="c1"># w, h = self.screen_size</span>
+        <span class="c1"># pixel_district_map = np.empty((w, h), dtype=np.uint8)</span>
+        <span class="c1"># fill_voronoi_diagram(</span>
+        <span class="c1">#     pixel_district_map, w, h, np.array(fiducial_pos, dtype=np.float64),</span>
+        <span class="c1">#     np.array(fiducial_identity, dtype=np.uint8))</span>
         <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_district_pixels</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fiducial_pos</span><span class="p">),</span> <span class="n">fiducial_identity</span><span class="p">,</span> <span class="n">unique_ids</span><span class="p">)</span>
         <span class="n">precinct_assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assign_precincts_to_districts</span><span class="p">(</span>
@@ -190,7 +195,7 @@
             <span class="k">if</span> <span class="n">fiducials</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
                     <span class="n">fiducials</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span><span class="p">)</span>
-                    <span class="n">fiducial_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span>
+                    <span class="n">fiducial_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fiducials</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
                 <span class="n">callback</span><span class="p">([],</span> <span class="p">[],</span> <span class="p">[])</span>
@@ -379,6 +384,9 @@
 
         <span class="n">disconnected</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">precincts</span> <span class="ow">in</span> <span class="n">precinct_assignment</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">precincts</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+
             <span class="n">disconnected</span> <span class="o">=</span> <span class="n">Precinct</span><span class="o">.</span><span class="n">find_disconnected_precincts</span><span class="p">(</span>
                 <span class="n">precincts</span><span class="p">,</span> <span class="n">district_map</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">disconnected</span><span class="p">:</span>
@@ -410,6 +418,7 @@
                 <span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">,</span> <span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">district_i</span> <span class="o">==</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Got precinct under no district&#39;</span><span class="p">,</span> <span class="n">precinct</span><span class="o">.</span><span class="n">identity</span><span class="p">)</span>
                 <span class="k">continue</span>
 
             <span class="n">precinct_assignment</span><span class="p">[</span><span class="n">district_i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precinct</span><span class="p">)</span>
@@ -425,20 +434,26 @@
 <span class="sd">        pixel_district_map is filled in with the index of the district</span>
 <span class="sd">        identity in unique_ids to make it 0-n-1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="n">vor</span> <span class="o">=</span> <span class="n">Voronoi</span><span class="p">(</span><span class="n">fiducials</span><span class="p">)</span>
+        <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="n">regions</span><span class="p">,</span> <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">voronoi_finite_polygons_2d</span><span class="p">(</span><span class="n">vor</span><span class="p">)</span>
-
+        <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">regions</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">2</span>
         <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_size</span>
         <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
+        <span class="n">polies</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">region_indices</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>
             <span class="n">poly</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">vertices</span><span class="p">[</span><span class="n">region_indices</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">))))</span>
             <span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">poly</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
             <span class="n">idx</span> <span class="o">=</span> <span class="n">unique_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">fiducials_identity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">collider</span><span class="o">.</span><span class="n">mark_pixels_u8</span><span class="p">(</span><span class="n">pixel_district_map</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+            <span class="n">polies</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">[</span><span class="n">region_indices</span><span class="p">]])</span>
 
+        <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+        <span class="c1">#print(&quot;{:0.5f}, {:0.5f}, {:0.5f}&quot;.format(t1 - t0, t2 - t1, t3 - t2))</span>
         <span class="k">return</span> <span class="n">pixel_district_map</span></div>
 
 <div class="viewcode-block" id="VoronoiMapping.voronoi_finite_polygons_2d"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.voronoi_finite_polygons_2d">[docs]</a>    <span class="k">def</span> <span class="nf">voronoi_finite_polygons_2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vor</span><span class="p">):</span>
@@ -452,8 +467,6 @@
 <span class="sd">        ----------</span>
 <span class="sd">        vor : Voronoi</span>
 <span class="sd">            Input diagram</span>
-<span class="sd">        radius : float, optional</span>
-<span class="sd">            Distance to &#39;points at infinity&#39;.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -466,81 +479,114 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_regions</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">new_vertices</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">vertices</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">orig_vertices</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">vertices</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">new_vertices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">orig_vertices</span><span class="p">)</span>
+        <span class="c1"># list of tuple of indices in orig_vertices, each describing a ridge</span>
+        <span class="c1"># made by a pair of returned vertices</span>
+        <span class="n">ridge_vertices</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">ridge_vertices</span>
+        <span class="c1"># list of tuples, each two indices in points. They describe a ridge</span>
+        <span class="c1"># perpendicular to their line</span>
+        <span class="n">ridge_points</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">ridge_points</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ridge_vertices</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ridge_points</span><span class="p">)</span>
+        <span class="c1"># list of tuple, each a point passed by the user</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span>
+        <span class="c1"># for each point in points, it&#39;s the index in regions that contains it</span>
+        <span class="n">point_region</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">point_region</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">point_region</span><span class="p">)</span>
+        <span class="c1"># list of lists, each is indices in orig_vertices making the polygon</span>
+        <span class="n">regions</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">regions</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">([</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">regions</span> <span class="k">if</span> <span class="n">r</span><span class="p">])</span>
 
         <span class="n">center</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_size</span>
         <span class="n">radius</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
 
         <span class="c1"># Construct a map containing all ridges for a given point</span>
+        <span class="c1"># for every point it lists all counter points and vertices between them</span>
         <span class="n">all_ridges</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">),</span> <span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">vor</span><span class="o">.</span><span class="n">ridge_points</span><span class="p">,</span> <span class="n">vor</span><span class="o">.</span><span class="n">ridge_vertices</span><span class="p">):</span>
-            <span class="n">all_ridges</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">p2</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">))</span>
-            <span class="n">all_ridges</span><span class="p">[</span><span class="n">p2</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">p1</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">))</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">),</span> <span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ridge_points</span><span class="p">,</span> <span class="n">ridge_vertices</span><span class="p">):</span>
+            <span class="c1"># points p1, p2 will have the same vertices between them</span>
+            <span class="n">all_ridges</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">))</span>
+            <span class="n">all_ridges</span><span class="p">[</span><span class="n">p2</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">))</span>
 
-        <span class="c1"># Reconstruct infinite regions</span>
-        <span class="k">for</span> <span class="n">p1</span><span class="p">,</span> <span class="n">region</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vor</span><span class="o">.</span><span class="n">point_region</span><span class="p">):</span>  <span class="c1"># region of each point</span>
-            <span class="n">vertices</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">regions</span><span class="p">[</span><span class="n">region</span><span class="p">]</span>  <span class="c1"># indices of region vertices</span>
+        <span class="c1"># compute the polygons for each region</span>
+        <span class="k">for</span> <span class="n">p1</span><span class="p">,</span> <span class="n">region</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">point_region</span><span class="p">):</span>
+            <span class="c1"># The region polygon. First get all vertices for the region within</span>
+            <span class="c1"># the screen</span>
+            <span class="n">region_vertices</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">regions</span><span class="p">[</span><span class="n">region</span><span class="p">]:</span>
+                <span class="c1"># skip infinite vertices</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
 
-            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">v</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">):</span>
-                <span class="c1"># finite region</span>
-                <span class="n">new_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span>
-                <span class="k">continue</span>
-
-            <span class="c1"># reconstruct a non-finite region</span>
-            <span class="n">ridges</span> <span class="o">=</span> <span class="n">all_ridges</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span>
-
-            <span class="c1"># get all vertices that already exists</span>
-            <span class="n">temp_vertices</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="p">[(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">[</span><span class="n">v</span><span class="p">]]</span> <span class="k">for</span>
-                <span class="n">v</span> <span class="ow">in</span> <span class="n">vertices</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># skip vertices outside the screen</span>
+                <span class="c1"># x, y = orig_vertices[v]</span>
+                <span class="c1"># if not (0 &lt;= x &lt;= w - 1 and 0 &lt;= y &lt;= h - 1):</span>
+                <span class="c1">#     continue</span>
+                <span class="n">region_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">orig_vertices</span><span class="p">[</span><span class="n">v</span><span class="p">]])</span>
 
             <span class="c1"># all the ridges that make the region</span>
-            <span class="k">for</span> <span class="n">p2</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span> <span class="ow">in</span> <span class="n">ridges</span><span class="p">:</span>
-                <span class="c1"># if the second point of the ridge is outside the finite area,</span>
+            <span class="k">for</span> <span class="n">p1_</span><span class="p">,</span> <span class="n">p2_</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span> <span class="ow">in</span> <span class="n">all_ridges</span><span class="p">[</span><span class="n">p1</span><span class="p">]:</span>
+                <span class="c1"># if the second point of the ridge is infinite,</span>
                 <span class="c1"># one and only one of the vertex indices will be -1</span>
                 <span class="k">if</span> <span class="n">v2</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span> <span class="o">=</span> <span class="n">v2</span><span class="p">,</span> <span class="n">v1</span>
                 <span class="k">if</span> <span class="n">v1</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">assert</span> <span class="n">v2</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-                    <span class="c1"># finite ridge: already in the region</span>
+                    <span class="c1"># x1, y1 = orig_vertices[v1]</span>
+                    <span class="c1"># x2, y2 = orig_vertices[v2]</span>
+                    <span class="c1">#</span>
+                    <span class="c1"># # assume that if a vertex is outside the screen,</span>
+                    <span class="c1"># # the other vertex must be on the other side of the p1-p2</span>
+                    <span class="c1"># # perpendicular</span>
+                    <span class="c1"># if not (0 &lt;= x1 &lt;= w - 1 and 0 &lt;= y1 &lt;= h - 1):</span>
+                    <span class="c1">#     region_vertices.append(</span>
+                    <span class="c1">#         [[x2, y2], [x1 - x2, y1 - y2], None, [x1, y1]])</span>
+                    <span class="c1"># if not (0 &lt;= x2 &lt;= w - 1 and 0 &lt;= y2 &lt;= h - 1):</span>
+                    <span class="c1">#     region_vertices.append(</span>
+                    <span class="c1">#         [[x1, y1], [x2 - x1, y2 - y1], None, [x2, y2]])</span>
+
                     <span class="k">continue</span>
+                <span class="c1"># assume that if there&#39;s an infinite point, the pair will be</span>
+                <span class="c1"># within the screen boundary</span>
+                <span class="k">assert</span> <span class="n">v2</span> <span class="o">&gt;=</span> <span class="mi">0</span>
 
                 <span class="c1"># Compute the missing endpoint of an infinite ridge</span>
 
-                <span class="n">t</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">p2</span><span class="p">]</span> <span class="o">-</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span>  <span class="c1"># tangent</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">p2_</span><span class="p">]</span> <span class="o">-</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">p1_</span><span class="p">]</span>  <span class="c1"># tangent</span>
                 <span class="n">t</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
                 <span class="c1"># normal, facing to the left of the line between p1 - p2</span>
                 <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
 
                 <span class="c1"># find midpoint between the two points</span>
-                <span class="n">midpoint</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">midpoint</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">points</span><span class="p">[[</span><span class="n">p1_</span><span class="p">,</span> <span class="n">p2_</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 <span class="c1"># find whether the normal points in the same direction as the</span>
                 <span class="c1"># line made by the center of the voronoi points with midpoint.</span>
                 <span class="c1"># If it faces the opposite direction, reorient to face from</span>
                 <span class="c1"># the center to midpoint direction (i.e. away from the center)</span>
+                <span class="c1"># It will be the same for p1, and p2 when we encounter each</span>
+                <span class="c1"># this ensures that we get the same far point for each</span>
                 <span class="n">direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">midpoint</span> <span class="o">-</span> <span class="n">center</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="n">n</span>
                 <span class="c1"># add a point very far from the last point</span>
-                <span class="n">far_point</span> <span class="o">=</span> <span class="n">vor</span><span class="o">.</span><span class="n">vertices</span><span class="p">[</span><span class="n">v2</span><span class="p">]</span> <span class="o">+</span> <span class="n">direction</span> <span class="o">*</span> <span class="n">radius</span>
-                <span class="n">temp_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">vor</span><span class="o">.</span><span class="n">vertices</span><span class="p">[</span><span class="n">v2</span><span class="p">],</span> <span class="n">direction</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">far_point</span><span class="p">])</span>
+                <span class="n">far_point</span> <span class="o">=</span> <span class="n">orig_vertices</span><span class="p">[</span><span class="n">v2</span><span class="p">]</span> <span class="o">+</span> <span class="n">direction</span> <span class="o">*</span> <span class="n">radius</span>
+                <span class="n">region_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">orig_vertices</span><span class="p">[</span><span class="n">v2</span><span class="p">],</span> <span class="n">direction</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">far_point</span><span class="p">])</span>
 
+            <span class="c1"># for (x1, y1), direction, v, (x2, y2) in temp_vertices:</span>
+            <span class="c1">#     if v is not None:</span>
+            <span class="c1">#         assert x2 &gt;= 0 and y2 &gt;= 0</span>
             <span class="c1"># finish</span>
-            <span class="n">temp_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fix_voronoi_infinite_regions</span><span class="p">(</span>
-                <span class="n">temp_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">sorted_region_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fix_voronoi_infinite_regions</span><span class="p">(</span>
+                <span class="n">region_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">new_region</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_missing_polygon_points</span><span class="p">(</span>
-                <span class="n">temp_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">)</span>
+                <span class="n">sorted_region_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">)</span>
             <span class="n">new_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_region</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">new_regions</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">)</span></div>
+        <span class="n">new_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_regions</span><span class="p">,</span> <span class="n">new_vertices</span></div>
 
-    <span class="k">def</span> <span class="nf">fix_voronoi_infinite_regions</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">):</span>
-        <span class="n">vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">])</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">vs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">vertices</span> <span class="o">=</span> <span class="p">[</span><span class="n">vertices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">angles</span><span class="p">)]</span>
-
+    <span class="k">def</span> <span class="nf">fix_voronoi_infinite_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">((</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">direction</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">direction</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
@@ -595,6 +641,11 @@
             <span class="n">x2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">w_max</span><span class="p">)</span>
             <span class="n">y2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">y2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">h_max</span><span class="p">)</span>
             <span class="n">vertices</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span>
+
+        <span class="n">vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">])</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">vs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="p">[</span><span class="n">vertices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">angles</span><span class="p">)]</span>
         <span class="k">return</span> <span class="n">vertices</span>
 
     <span class="k">def</span> <span class="nf">add_missing_polygon_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">):</span>
