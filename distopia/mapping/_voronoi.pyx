@@ -14,7 +14,7 @@ containing collider.pyx and::
     python setup.py build_ext --inplace
 '''
 
-__all__ = ('PolygonCollider', )
+__all__ = ('PolygonCollider', 'fill_voronoi_diagram')
 
 
 cimport cython
@@ -24,6 +24,32 @@ cdef extern from "math.h":
     double round(double val)
     double floor(double val)
     double ceil(double val)
+    double pow(double x, double y)
+    double sqrt(double x)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def fill_voronoi_diagram(
+    np.ndarray[np.uint8_t, ndim=2] pixels, int w, int h,
+    np.ndarray[np.float64_t, ndim=2] sites, np.ndarray[np.uint8_t] site_ids):
+    cdef int x, y, i, i_min
+    cdef double dist, dist_min
+    if not len(site_ids):
+        raise ValueError('No sites specified')
+
+    for x in range(w):
+        for y in range(h):
+            dist_min = sqrt(pow(x - sites[0, 0], 2) + pow(y - sites[0, 1], 2))
+            i_min = 0
+
+            for i in range(1, len(site_ids)):
+                dist = sqrt(pow(x - sites[i, 0], 2) + pow(y - sites[i, 1], 2))
+                if dist < dist_min:
+                    dist_min = dist
+                    i_min = i
+
+            pixels[x, y] = site_ids[i_min]
 
 
 cdef class PolygonCollider(object):

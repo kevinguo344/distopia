@@ -659,16 +659,9 @@ class VoronoiApp(App):
     def create_district_metrics(self, districts):
         for district in districts:
             for name in self.metrics:
-                if name == 'income':
-                    continue
                 district.metrics[name] = \
                     DistrictHistogramAggregateMetric(
                         district=district, name=name)
-
-            name = 'income'
-            if name in self.metrics:
-                district.metrics[name] = \
-                    DistrictScalarAggregateMetric(district=district, name=name)
 
     def load_precinct_metrics(self):
         assert self.use_county_dataset
@@ -681,8 +674,6 @@ class VoronoiApp(App):
         root = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'aggregate')
         for name in self.metrics:
-            if name == 'income':
-                continue
 
             fname = os.path.join(root, '{}.csv'.format(name))
             with open(fname) as fh:
@@ -697,22 +688,6 @@ class VoronoiApp(App):
                 precinct_name = names[record[3]]
                 precinct.metrics[name] = PrecinctHistogram(
                     name=name, labels=header, data=data[precinct_name])
-
-        name = 'income'
-        if name in self.metrics:
-            fname = os.path.join(root, '{}.csv'.format(name))
-            with open(fname) as fh:
-                reader = csv.reader(fh, delimiter='\t')
-                _ = next(reader)[1:]  # header
-
-                data = {}
-                for row in reader:
-                    data[row[0]] = float(row[1])
-
-            for precinct, record in zip(self.precincts, geo_data.records):
-                precinct_name = names[record[3]]
-                precinct.metrics[name] = PrecinctScalar(
-                    name=name, value=data[precinct_name])
 
     def load_precinct_adjacency(self):
         assert self.use_county_dataset

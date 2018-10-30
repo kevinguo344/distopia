@@ -44,7 +44,7 @@
     1920,
     1080
   ],
-  "show_precinct_id": true,
+  "show_precinct_id": false,
   "show_voronoi_boundaries": false,
   "table_mode": false,
   "use_county_dataset": true,

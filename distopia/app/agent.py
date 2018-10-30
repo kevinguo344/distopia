@@ -156,6 +156,9 @@ class VoronoiAgent(object):
                 keys.append(vor.add_fiducial(location, fid_id))
 
         districts = vor.apply_voronoi()
+        for key in keys:
+            vor.remove_fiducial(key)
+
         if not districts:
             return [], []
 
@@ -172,25 +175,34 @@ class VoronoiAgent(object):
             district.compute_metrics()
             district_metrics[district.identity] = list(district.metrics.values())
 
-        for key in keys:
-            vor.remove_fiducial(key)
-
         return state_metrics, district_metrics
 
 
 if __name__ == '__main__':
     import time
+    import random
     agent = VoronoiAgent()
     agent.load_data()
     print('data loaded')
+    import matplotlib.pyplot as plt
+    from scipy.spatial import Voronoi, voronoi_plot_2d
+    fids = {0: [(650.8710191964827, 583.5091085945952)], 1: [(1187.9730517048276, 351.9954754978156)], 2: [(1894.4960769743038, 296.9700201607503)], 3: [(1476.3152220726583, 305.93794456238794)]}
 
-    t = [0, ] * 10
+    # vor = Voronoi(np.array([v[0] for v in fids.values()]))
+    # fig = voronoi_plot_2d(vor)
+    # plt.show()
+    # exit()
+    agent.compute_voronoi_metrics(fids)
+
+    w, h = agent.screen_size
+    t = [0, ] * 100
     for i in range(len(t)):
         ts = time.clock()
-        agent.compute_voronoi_metrics(
-            {0: [(250., 250.)],
-             1: [(750., 250.)],
-             2: [(250., 750.)],
-             3: [(750, 750)]})
+        fids = {i: [(random.random() * w, random.random() * h)] for i in range(4)}
+        try:
+            agent.compute_voronoi_metrics(fids)
+        except Exception:
+            print(fids)
+            raise
         t[i] = time.clock() - ts
     print('done in {} - {}'.format(min(t), max(t)))

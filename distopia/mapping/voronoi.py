@@ -5,7 +5,7 @@ Voronoi Mapping
 from scipy.spatial import Voronoi
 from distopia.district import District
 from distopia.precinct import Precinct
-from distopia.mapping._voronoi import PolygonCollider
+from distopia.mapping._voronoi import PolygonCollider, fill_voronoi_diagram
 import numpy as np
 from collections import defaultdict
 import logging
@@ -96,7 +96,7 @@ class VoronoiMapping(object):
     def apply_voronoi(self):
         """Not thread safe."""
         fiducials = dict(self.fiducial_locations)
-        fiducial_ids = self.fiducial_ids
+        fiducial_ids = dict(self.fiducial_ids)
 
         if len(fiducials) <= 3:
             return []
@@ -106,6 +106,11 @@ class VoronoiMapping(object):
         fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
         unique_ids = list(sorted(set(fiducial_identity)))
 
+        # w, h = self.screen_size
+        # pixel_district_map = np.empty((w, h), dtype=np.uint8)
+        # fill_voronoi_diagram(
+        #     pixel_district_map, w, h, np.array(fiducial_pos, dtype=np.float64),
+        #     np.array(fiducial_identity, dtype=np.uint8))
         pixel_district_map = self.compute_district_pixels(
             np.asarray(fiducial_pos), fiducial_identity, unique_ids)
         precinct_assignment = self.assign_precincts_to_districts(
@@ -155,7 +160,7 @@ class VoronoiMapping(object):
             if fiducials is None:
                 with lock:
                     fiducials = dict(self.fiducial_locations)
-                    fiducial_ids = self.fiducial_ids
+                    fiducial_ids = dict(self.fiducial_ids)
 
             if len(fiducials) <= 3:
                 callback([], [], [])
@@ -344,6 +349,9 @@ class VoronoiMapping(object):
 
         disconnected = []
         for precincts in precinct_assignment:
+            if len(precincts) <= 1:
+                continue
+
             disconnected = Precinct.find_disconnected_precincts(
                 precincts, district_map)
             if disconnected:
@@ -375,6 +383,7 @@ class VoronoiMapping(object):
                 x1 - x0, y1 - y0, 2 ** 8 - 1)
 
             if district_i == 2 ** 8 - 1:
+                print('Got precinct under no district', precinct.identity)
                 continue
 
             precinct_assignment[district_i].append(precinct)
@@ -390,20 +399,26 @@ class VoronoiMapping(object):
         pixel_district_map is filled in with the index of the district
         identity in unique_ids to make it 0-n-1.
         """
+        t0 = time.clock()
         vor = Voronoi(fiducials)
+        t1 = time.clock()
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
-
+        t2 = time.clock()
         assert len(regions) <= 2 ** 8 - 2
         w, h = self.screen_size
         pixel_district_map = np.ones((w, h), dtype=np.uint8) * (2 ** 8 - 1)
 
+        polies = []
         for i, region_indices in enumerate(regions):
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
             collider = PolygonCollider(points=poly, cache=True)
 
             idx = unique_ids.index(fiducials_identity[i])
             collider.mark_pixels_u8(pixel_district_map, w, h, idx)
+            polies.append([(x, y) for x, y in vertices[region_indices]])
 
+        t3 = time.clock()
+        #print("{:0.5f}, {:0.5f}, {:0.5f}".format(t1 - t0, t2 - t1, t3 - t2))
         return pixel_district_map
 
     def voronoi_finite_polygons_2d(self, vor):
@@ -417,8 +432,6 @@ class VoronoiMapping(object):
         ----------
         vor : Voronoi
             Input diagram
-        radius : float, optional
-            Distance to 'points at infinity'.
 
         Returns
         -------
@@ -431,81 +444,114 @@ class VoronoiMapping(object):
 
         """
         new_regions = []
-        new_vertices = vor.vertices.tolist()
+        orig_vertices = vor.vertices.tolist()
+        new_vertices = list(orig_vertices)
+        # list of tuple of indices in orig_vertices, each describing a ridge
+        # made by a pair of returned vertices
+        ridge_vertices = vor.ridge_vertices
+        # list of tuples, each two indices in points. They describe a ridge
+        # perpendicular to their line
+        ridge_points = vor.ridge_points
+        assert len(ridge_vertices) == len(ridge_points)
+        # list of tuple, each a point passed by the user
+        points = vor.points
+        # for each point in points, it's the index in regions that contains it
+        point_region = vor.point_region
+        assert len(points) == len(point_region)
+        # list of lists, each is indices in orig_vertices making the polygon
+        regions = vor.regions
+        assert len(points) == len([r for r in regions if r])
 
         center = vor.points.mean(axis=0)
         w, h = self.screen_size
         radius = 100 * max(w, h)
 
         # Construct a map containing all ridges for a given point
+        # for every point it lists all counter points and vertices between them
         all_ridges = defaultdict(list)
-        for (p1, p2), (v1, v2) in zip(vor.ridge_points, vor.ridge_vertices):
-            all_ridges[p1].append((p2, v1, v2))
-            all_ridges[p2].append((p1, v1, v2))
+        for (p1, p2), (v1, v2) in zip(ridge_points, ridge_vertices):
+            # points p1, p2 will have the same vertices between them
+            all_ridges[p1].append((p1, p2, v1, v2))
+            all_ridges[p2].append((p1, p2, v1, v2))
 
-        # Reconstruct infinite regions
-        for p1, region in enumerate(vor.point_region):  # region of each point
-            vertices = vor.regions[region]  # indices of region vertices
+        # compute the polygons for each region
+        for p1, region in enumerate(point_region):
+            # The region polygon. First get all vertices for the region within
+            # the screen
+            region_vertices = []
+            for v in regions[region]:
+                # skip infinite vertices
+                if v < 0:
+                    continue
 
-            if all(v >= 0 for v in vertices):
-                # finite region
-                new_regions.append(vertices)
-                continue
-
-            # reconstruct a non-finite region
-            ridges = all_ridges[p1]
-
-            # get all vertices that already exists
-            temp_vertices = [
-                [(None, None), None, v, new_vertices[v]] for
-                v in vertices if v >= 0]
+                # skip vertices outside the screen
+                # x, y = orig_vertices[v]
+                # if not (0 <= x <= w - 1 and 0 <= y <= h - 1):
+                #     continue
+                region_vertices.append(
+                    [(None, None), None, v, orig_vertices[v]])
 
             # all the ridges that make the region
-            for p2, v1, v2 in ridges:
-                # if the second point of the ridge is outside the finite area,
+            for p1_, p2_, v1, v2 in all_ridges[p1]:
+                # if the second point of the ridge is infinite,
                 # one and only one of the vertex indices will be -1
                 if v2 < 0:
                     v1, v2 = v2, v1
                 if v1 >= 0:
                     assert v2 >= 0
-                    # finite ridge: already in the region
+                    # x1, y1 = orig_vertices[v1]
+                    # x2, y2 = orig_vertices[v2]
+                    #
+                    # # assume that if a vertex is outside the screen,
+                    # # the other vertex must be on the other side of the p1-p2
+                    # # perpendicular
+                    # if not (0 <= x1 <= w - 1 and 0 <= y1 <= h - 1):
+                    #     region_vertices.append(
+                    #         [[x2, y2], [x1 - x2, y1 - y2], None, [x1, y1]])
+                    # if not (0 <= x2 <= w - 1 and 0 <= y2 <= h - 1):
+                    #     region_vertices.append(
+                    #         [[x1, y1], [x2 - x1, y2 - y1], None, [x2, y2]])
+
                     continue
+                # assume that if there's an infinite point, the pair will be
+                # within the screen boundary
+                assert v2 >= 0
 
                 # Compute the missing endpoint of an infinite ridge
 
-                t = vor.points[p2] - vor.points[p1]  # tangent
+                t = vor.points[p2_] - vor.points[p1_]  # tangent
                 t /= np.linalg.norm(t)
                 # normal, facing to the left of the line between p1 - p2
                 n = np.array([-t[1], t[0]])
 
                 # find midpoint between the two points
-                midpoint = vor.points[[p1, p2]].mean(axis=0)
+                midpoint = vor.points[[p1_, p2_]].mean(axis=0)
                 # find whether the normal points in the same direction as the
                 # line made by the center of the voronoi points with midpoint.
                 # If it faces the opposite direction, reorient to face from
                 # the center to midpoint direction (i.e. away from the center)
+                # It will be the same for p1, and p2 when we encounter each
+                # this ensures that we get the same far point for each
                 direction = np.sign(np.dot(midpoint - center, n)) * n
                 # add a point very far from the last point
-                far_point = vor.vertices[v2] + direction * radius
-                temp_vertices.append(
-                    [vor.vertices[v2], direction, None, far_point])
+                far_point = orig_vertices[v2] + direction * radius
+                region_vertices.append(
+                    [orig_vertices[v2], direction, None, far_point])
 
+            # for (x1, y1), direction, v, (x2, y2) in temp_vertices:
+            #     if v is not None:
+            #         assert x2 >= 0 and y2 >= 0
             # finish
-            temp_vertices = self.fix_voronoi_infinite_regions(
-                temp_vertices, w - 1, h - 1)
+            sorted_region_vertices = self.fix_voronoi_infinite_regions(
+                region_vertices, w - 1, h - 1)
             new_region = self.add_missing_polygon_points(
-                temp_vertices, w - 1, h - 1, new_vertices)
+                sorted_region_vertices, w - 1, h - 1, new_vertices)
             new_regions.append(new_region)
 
-        return new_regions, np.asarray(new_vertices)
+        new_vertices = np.asarray(new_vertices)
+        return new_regions, new_vertices
 
-    def fix_voronoi_infinite_regions(
-            self, vertices, w_max, h_max):
-        vs = np.asarray([v[3] for v in vertices])
-        c = vs.mean(axis=0)
-        angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
-        vertices = [vertices[i] for i in np.argsort(angles)]
-
+    def fix_voronoi_infinite_regions(self, vertices, w_max, h_max):
         for i, ((x1, y1), direction, v, (x2, y2)) in enumerate(vertices):
             if direction is None:
                 continue
@@ -560,6 +606,11 @@ class VoronoiMapping(object):
             x2 = min(max(x2, 0), w_max)
             y2 = min(max(y2, 0), h_max)
             vertices[i][3] = x2, y2
+
+        vs = np.asarray([v[3] for v in vertices])
+        c = vs.mean(axis=0)
+        angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
+        vertices = [vertices[i] for i in np.argsort(angles)]
         return vertices
 
     def add_missing_polygon_points(self, vertices, w_max, h_max, new_vertices):
