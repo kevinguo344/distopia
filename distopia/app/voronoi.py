@@ -810,6 +810,7 @@ class VoronoiApp(App):
             def enable_widget():
                 box.remove_widget(err)
                 box.add_widget(voronoi_widget)
+                voronoi_widget.ros_bridge = self.ros_bridge
 
             self.ros_bridge = RosBridge(
                 host=self.ros_host, port=self.ros_port,
