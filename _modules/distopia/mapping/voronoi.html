@@ -288,7 +288,8 @@
             <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
 
         <span class="n">colliders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_colliders</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">precinct</span><span class="o">.</span><span class="n">boundary</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span>
+            <span class="n">PolygonCollider</span><span class="p">(</span>
+                <span class="n">points</span><span class="o">=</span><span class="n">precinct</span><span class="o">.</span><span class="n">boundary</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span> <span class="k">for</span>
             <span class="n">precinct</span> <span class="ow">in</span> <span class="n">precincts</span><span class="p">]</span>
 
         <span class="n">precinct_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_indices</span> <span class="o">=</span> <span class="p">[]</span>
@@ -443,17 +444,19 @@
         <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_size</span>
         <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="n">polies</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">colliders</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">region_indices</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>
             <span class="n">poly</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">vertices</span><span class="p">[</span><span class="n">region_indices</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">))))</span>
-            <span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">poly</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">unique_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">fiducials_identity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-            <span class="n">collider</span><span class="o">.</span><span class="n">mark_pixels_u8</span><span class="p">(</span><span class="n">pixel_district_map</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
-            <span class="n">polies</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">[</span><span class="n">region_indices</span><span class="p">]])</span>
+            <span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">poly</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+            <span class="n">colliders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collider</span><span class="p">)</span>
 
         <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
-        <span class="c1">#print(&quot;{:0.5f}, {:0.5f}, {:0.5f}&quot;.format(t1 - t0, t2 - t1, t3 - t2))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">region_indices</span><span class="p">,</span> <span class="n">collider</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">regions</span><span class="p">,</span> <span class="n">colliders</span><span class="p">)):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">unique_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">fiducials_identity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">collider</span><span class="o">.</span><span class="n">mark_pixels_u8</span><span class="p">(</span><span class="n">pixel_district_map</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+
+        <span class="n">t4</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+        <span class="c1"># print(&quot;{:0.5f}, {:0.5f}, {:0.5f}, {:0.5f}&quot;.format(t1 - t0, t2 - t1, t3 - t2, t4 - t3))</span>
         <span class="k">return</span> <span class="n">pixel_district_map</span></div>
 
 <div class="viewcode-block" id="VoronoiMapping.voronoi_finite_polygons_2d"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.voronoi_finite_polygons_2d">[docs]</a>    <span class="k">def</span> <span class="nf">voronoi_finite_polygons_2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vor</span><span class="p">):</span>
@@ -577,126 +580,25 @@
             <span class="c1">#     if v is not None:</span>
             <span class="c1">#         assert x2 &gt;= 0 and y2 &gt;= 0</span>
             <span class="c1"># finish</span>
-            <span class="n">sorted_region_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fix_voronoi_infinite_regions</span><span class="p">(</span>
-                <span class="n">region_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">new_region</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_missing_polygon_points</span><span class="p">(</span>
-                <span class="n">sorted_region_vertices</span><span class="p">,</span> <span class="n">w</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">)</span>
-            <span class="n">new_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_region</span><span class="p">)</span>
 
-        <span class="n">new_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">new_regions</span><span class="p">,</span> <span class="n">new_vertices</span></div>
+            <span class="n">vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">region_vertices</span><span class="p">])</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">vs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">region_vertices</span> <span class="o">=</span> <span class="p">[</span><span class="n">region_vertices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">angles</span><span class="p">)]</span>
 
-    <span class="k">def</span> <span class="nf">fix_voronoi_infinite_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">((</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">direction</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">direction</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">continue</span>
-
-            <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">):</span>
-                <span class="n">slope</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">inf</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">y2</span> <span class="o">-</span> <span class="n">y1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">x1</span><span class="p">)</span>
-
-            <span class="n">offset</span> <span class="o">=</span> <span class="n">y1</span> <span class="o">-</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">x1</span>
-            <span class="c1"># test if it intersects with top or bottom of screen</span>
-            <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="n">x2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">w_max</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">slope</span><span class="p">):</span>
-                <span class="n">y2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">y2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">h_max</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">x_top</span> <span class="o">=</span> <span class="p">(</span><span class="n">h_max</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">slope</span>  <span class="c1"># set y to h_max, solve x</span>
-                <span class="n">x_bot</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">slope</span>  <span class="c1"># set y to 0, solve x</span>
-                <span class="n">y_left</span> <span class="o">=</span> <span class="n">slope</span> <span class="o">*</span> <span class="mi">0</span> <span class="o">+</span> <span class="n">offset</span>  <span class="c1"># set x to 0, solve y</span>
-                <span class="n">y_right</span> <span class="o">=</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">w_max</span> <span class="o">+</span> <span class="n">offset</span>  <span class="c1"># set x to w_max, solve y</span>
-                <span class="k">if</span> <span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x_top</span> <span class="o">&lt;=</span> <span class="n">w_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">h_max</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">x_top</span>
-                        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">y_right</span> <span class="o">&lt;=</span> <span class="n">h_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">y_right</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">w_max</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x_bot</span> <span class="o">&lt;=</span> <span class="n">w_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="mi">0</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">x_bot</span>
-                        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">y_right</span> <span class="o">&lt;=</span> <span class="n">h_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">y_right</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">w_max</span>
+            <span class="n">region_verts_i</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">region_vertices</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">region_verts_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x_top</span> <span class="o">&lt;=</span> <span class="n">w_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">h_max</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">x_top</span>
-                        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">y_left</span> <span class="o">&lt;=</span> <span class="n">h_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">y_left</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="mi">0</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x_bot</span> <span class="o">&lt;=</span> <span class="n">w_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="mi">0</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="n">x_bot</span>
-                        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">y_left</span> <span class="o">&lt;=</span> <span class="n">h_max</span><span class="p">:</span>
-                            <span class="n">y2</span> <span class="o">=</span> <span class="n">y_left</span>
-                            <span class="n">x2</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">region_verts_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">))</span>
+                    <span class="n">new_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
 
-            <span class="n">x2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">w_max</span><span class="p">)</span>
-            <span class="n">y2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">y2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">h_max</span><span class="p">)</span>
-            <span class="n">vertices</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span>
+            <span class="n">new_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region_verts_i</span><span class="p">)</span>
 
-        <span class="n">vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vertices</span><span class="p">])</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">vs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">vertices</span> <span class="o">=</span> <span class="p">[</span><span class="n">vertices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">angles</span><span class="p">)]</span>
-        <span class="k">return</span> <span class="n">vertices</span>
-
-    <span class="k">def</span> <span class="nf">add_missing_polygon_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">,</span> <span class="n">new_vertices</span><span class="p">):</span>
-        <span class="n">region_verts_i</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">region_verts_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">region_verts_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">))</span>
-                <span class="n">new_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-
-            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">next_item</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">next_item</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-
-            <span class="c1"># if one of the points is within the space, then we never add an</span>
-            <span class="c1"># intermediate point because only two infinite points may contain</span>
-            <span class="c1"># a corner between them</span>
-            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">next_item</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">continue</span>
-
-            <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-            <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">next_item</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-            <span class="n">new_points</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">if</span> <span class="n">y1</span> <span class="o">==</span> <span class="n">h_max</span> <span class="ow">and</span> <span class="n">x2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">x1</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">y2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">y1</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">x2</span> <span class="o">==</span> <span class="n">w_max</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">x1</span> <span class="o">==</span> <span class="n">w_max</span> <span class="ow">and</span> <span class="n">y2</span> <span class="o">==</span> <span class="n">h_max</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">y1</span> <span class="o">==</span> <span class="n">h_max</span> <span class="ow">and</span> <span class="n">y2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">x1</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">x2</span> <span class="o">==</span> <span class="n">w_max</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">y1</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">y2</span> <span class="o">==</span> <span class="n">h_max</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">x1</span> <span class="o">==</span> <span class="n">w_max</span> <span class="ow">and</span> <span class="n">x2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">w_max</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-                <span class="n">new_points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">h_max</span><span class="p">))</span>
-
-            <span class="k">for</span> <span class="n">new_point</span> <span class="ow">in</span> <span class="n">new_points</span><span class="p">:</span>
-                <span class="n">region_verts_i</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">))</span>
-                <span class="n">new_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_point</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">region_verts_i</span></div>
+        <span class="c1"># region is sorted according to points order</span>
+        <span class="n">new_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">new_vertices</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_regions</span><span class="p">,</span> <span class="n">new_vertices</span></div></div>
 </pre></div>
 
           </div>
