@@ -184,18 +184,9 @@ if __name__ == '__main__':
     agent = VoronoiAgent()
     agent.load_data()
     print('data loaded')
-    import matplotlib.pyplot as plt
-    from scipy.spatial import Voronoi, voronoi_plot_2d
-    fids = {0: [(650.8710191964827, 583.5091085945952)], 1: [(1187.9730517048276, 351.9954754978156)], 2: [(1894.4960769743038, 296.9700201607503)], 3: [(1476.3152220726583, 305.93794456238794)]}
-
-    # vor = Voronoi(np.array([v[0] for v in fids.values()]))
-    # fig = voronoi_plot_2d(vor)
-    # plt.show()
-    # exit()
-    agent.compute_voronoi_metrics(fids)
 
     w, h = agent.screen_size
-    t = [0, ] * 100
+    t = [0, ] * 10
     for i in range(len(t)):
         ts = time.clock()
         fids = {i: [(random.random() * w, random.random() * h)] for i in range(4)}

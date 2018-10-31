@@ -56,6 +56,8 @@ cdef class PolygonCollider(object):
     ''' PolygonCollider checks whether a point is within a polygon defined by a
     list of corner points.
 
+    ``rect`` is (x, y, width, height)
+
     Based on http://alienryderflex.com/polygon/
 
     For example, a simple triangle::
@@ -79,16 +81,28 @@ cdef class PolygonCollider(object):
     cdef double *cconstant
     cdef double *cmultiple
     cdef char *cspace
+    # bounding box of the polygon (inclusive, width/height add 1)
+    # this is an integer
     cdef double min_x
     cdef double max_x
     cdef double min_y
     cdef double max_y
+    # size of the cached array after x/y_start
     cdef int width
     cdef int height
+    # offset in bounding box where the cached buffer starts
+    cdef int x_start
+    cdef int y_start
+    # offset in coordinates relative to the bounding box
+    cdef int x_offset
+    cdef int y_offset
+    cdef int empty
+    cdef object rect
+    # num polygon points
     cdef int count
 
     @cython.cdivision(True)
-    def __cinit__(self, points, cache=False, **kwargs):
+    def __cinit__(self, points, cache=False, rect=None, **kwargs):
         cdef int length = len(points)
         if length % 2:
             raise IndexError('Odd number of points provided')
@@ -98,6 +112,7 @@ cdef class PolygonCollider(object):
 
         cdef int count = length / 2
         self.count = count
+        self.rect = rect
         self.cpoints = <double *>malloc(length * cython.sizeof(double))
         self.cconstant = <double *>malloc(count * cython.sizeof(double))
         self.cmultiple = <double *>malloc(count * cython.sizeof(double))
@@ -108,19 +123,20 @@ cdef class PolygonCollider(object):
         if cpoints is NULL or cconstant is NULL or cmultiple is NULL:
             raise MemoryError()
 
-        self.min_x = min(points[0::2])
-        self.max_x = max(points[0::2])
-        self.min_y = min(points[1::2])
-        self.max_y = max(points[1::2])
-        cdef double min_x = floor(self.min_x), min_y = floor(self.min_y)
+        self.min_x = floor(min(points[0::2]))
+        self.max_x = ceil(max(points[0::2]))
+        self.min_y = floor(min(points[1::2]))
+        self.max_y = ceil(max(points[1::2]))
+
         cdef int i_x, i_y, j_x, j_y, i
-        cdef int j = count - 1, odd, width, height, x, y
+        cdef int j = count - 1, odd, x, y
         for i in range(length):
             cpoints[i] = points[i]
+
         if cache:
             for i in range(count):
-                cpoints[2 * i] -= min_x
-                cpoints[2 * i + 1] -= min_y
+                cpoints[2 * i] -= self.min_x
+                cpoints[2 * i + 1] -= self.min_y
 
         for i in range(count):
             i_x = i * 2
@@ -138,27 +154,61 @@ cdef class PolygonCollider(object):
                 cmultiple[i] = ((cpoints[j_x] - cpoints[i_x]) /
                                (cpoints[j_y] - cpoints[i_y]))
             j = i
-        if cache:
-            width = int(ceil(self.max_x) - min_x + 1.)
-            self.width = width
-            height = int(ceil(self.max_y) - min_y + 1.)
-            self.height = height
 
-            self.cspace = <char *>malloc(height * width * cython.sizeof(char))
+        cdef int x_, y_
+        if cache:
+            self.width = int(self.max_x - self.min_x + 1.)
+            self.height = int(self.max_y - self.min_y + 1.)
+            self.x_start = self.y_start = 0
+            self.empty = 0
+
+            if rect is not None:
+                x_off, y_off, w_, h_ = rect
+                w_ = int(ceil(w_))
+                h_ = int(ceil(h_))
+                self.x_offset = int(round(x_off - self.min_x))
+                self.y_offset = int(round(y_off - self.min_y))
+
+                # the rect is contained in polygon
+                if self.x_offset >= 0:
+                    self.width = max(min(w_, self.width - self.x_offset), 0)
+                    self.x_start = self.x_offset
+                else:
+                    self.width = max(min(w_ + self.x_offset, self.width), 0)
+                    self.x_start = 0
+
+                if self.y_offset >= 0:
+                    self.height = max(min(h_, self.height - self.y_offset), 0)
+                    self.y_start = self.y_offset
+                else:
+                    self.height = max(min(h_ + self.y_offset, self.height), 0)
+                    self.y_start = 0
+
+            if not self.height or not self.width:
+                self.empty = 1
+                self.cspace = <char *>malloc(cython.sizeof(char))
+                if self.cspace is NULL:
+                    raise MemoryError()
+                return
+
+            self.cspace = <char *>malloc(self.height * self.width * cython.sizeof(char))
             if self.cspace is NULL:
                 raise MemoryError()
-            for y in range(height):
-                for x in range(width):
+
+            for y_ in range(self.y_start, self.y_start + self.height):
+                y = y_ - self.y_start
+                for x_ in range(self.x_start, self.x_start + self.width):
+                    x = x_ - self.x_start
                     j = count - 1
                     odd = 0
                     for i in range(count):
                         i_y = i * 2 + 1
                         j_y = j * 2 + 1
-                        if (cpoints[i_y] < y and cpoints[j_y] >= y or
-                            cpoints[j_y] < y and cpoints[i_y] >= y):
-                            odd ^= y * cmultiple[i] + cconstant[i] < x
+                        if (cpoints[i_y] < y_ <= cpoints[j_y] or
+                            cpoints[j_y] < y_ <= cpoints[i_y]):
+                            odd ^= y_ * cmultiple[i] + cconstant[i] < x_
                         j = i
-                    self.cspace[y * width + x] = odd
+                    self.cspace[y * self.width + x] = odd
 
     def __dealloc__(self):
         free(self.cpoints)
@@ -172,17 +222,24 @@ cdef class PolygonCollider(object):
         if points is NULL or not (self.min_x <= x <= self.max_x and
                                   self.min_y <= y <= self.max_y):
             return False
+
+        cdef int x_, y_
         if self.cspace is not NULL:
-            y -= floor(self.min_y)
-            x -= floor(self.min_x)
-            return self.cspace[int(y) * self.width + int(x)]
+            if self.empty:
+                return False
+
+            # x/y relative to bounding box
+            x_ = int(round(x - self.min_x))
+            y_ = int(round(y - self.min_y))
+            if not (self.x_start <= x_ < self.x_start + self.width and self.y_start <= y_ < self.y_start + self.height):
+                return False
+            return self.cspace[(y_ - self.y_start) * self.width + x_ - self.x_start]
 
         cdef int j = self.count - 1, odd = 0, i, i_y, j_y, i_x, j_x
         for i in range(self.count):
             i_y = i * 2 + 1
             j_y = j * 2 + 1
-            if (points[i_y] < y and points[j_y] >= y or
-                points[j_y] < y and points[i_y] >= y):
+            if points[i_y] < y <= points[j_y] or points[j_y] < y <= points[i_y]:
                 odd ^= y * self.cmultiple[i] + self.cconstant[i] < x
             j = i
         return odd
@@ -192,60 +249,30 @@ cdef class PolygonCollider(object):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef int _mark_pixels(
-            self, int w, int h, int* _x0, int* _y0, int* _x1, int* _y1,
-            int* _x_offset, int* _y_offset):
-        cdef int x0, y0, x1, y1, x_offset, y_offset
-        # this assumes that the table is the x, y coordinates which is between
-        # 0 to w or h
-        x_offset = int(floor(self.min_x))
-        y_offset = int(floor(self.min_y))
-        if x_offset >= 0:
-            x0 = 0
-            if x_offset >= w:
-                x1 = x0
-            else:
-                x1 = min(self.width, w - x_offset)
-        else:
-            x0 = -x_offset
-            if x0 >= self.width:
-                x1 = x0
-            else:
-                x1 = min(w, self.width + x_offset) + x0
-
-        if y_offset >= 0:
-            y0 = 0
-            if y_offset >= h:
-                y1 = y0
-            else:
-                y1 = min(self.height, h - y_offset)
-        else:
-            y0 = -y_offset
-            if y0 >= self.height:
-                y1 = y0
-            else:
-                y1 = min(h, self.height + y_offset) + y0
-
-        _x0[0] = x0
-        _y0[0] = y0
-        _x1[0] = x1
-        _y1[0] = y1
-        _x_offset[0] = x_offset
-        _y_offset[0] = y_offset
-        return 0
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
     def mark_pixels_u8(self, np.ndarray[np.uint8_t, ndim=2] table, int w, int h,
                        np.uint8_t value):
-        cdef int x, y, x0, y0, x1, y1, x_offset, y_offset
+        cdef int x, y, x_offset, y_offset
         if self.cspace is NULL:
             raise TypeError('This method can only be called if cache was True')
+        if self.empty:
+            return
+        if self.rect is None:
+            raise ValueError('Can only be called if rect was specified')
+        if w != self.rect[2] or h != self.rect[3]:
+            raise ValueError('The w,h does not match the w/h provided in rect')
 
-        self._mark_pixels(w, h, &x0, &y0, &x1, &y1, &x_offset, &y_offset)
+        if self.x_offset >= 0:
+            x_offset = 0
+        else:
+            x_offset = -self.x_offset
 
-        for x in range(x0, x1):
-            for y in range(y0, y1):
+        if self.y_offset >= 0:
+            y_offset = 0
+        else:
+            y_offset = -self.y_offset
+
+        for x in range(self.width):
+            for y in range(self.height):
                 if self.cspace[y * self.width + x]:
                     table[x + x_offset, y + y_offset] = value
 
@@ -253,21 +280,36 @@ cdef class PolygonCollider(object):
     @cython.wraparound(False)
     def mark_pixels_u16(
             self, np.ndarray[np.uint16_t, ndim=2] table, int w, int h, np.uint16_t value):
-        cdef int x, y, x0, y0, x1, y1, x_offset, y_offset
+        cdef int x, y, x_offset, y_offset
         if self.cspace is NULL:
             raise TypeError('This method can only be called if cache was True')
+        if self.empty:
+            return
+        if self.rect is None:
+            raise ValueError('Can only be called if rect was specified')
+        if w != self.rect[2] or h != self.rect[3]:
+            raise ValueError('The w,h does not match the w/h provided in rect')
 
-        self._mark_pixels(w, h, &x0, &y0, &x1, &y1, &x_offset, &y_offset)
+        if self.x_offset >= 0:
+            x_offset = 0
+        else:
+            x_offset = -self.x_offset
 
-        for x in range(x0, x1):
-            for y in range(y0, y1):
+        if self.y_offset >= 0:
+            y_offset = 0
+        else:
+            y_offset = -self.y_offset
+
+        for x in range(self.width):
+            for y in range(self.height):
                 if self.cspace[y * self.width + x]:
                     table[x + x_offset, y + y_offset] = value
 
+    @staticmethod
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def get_arg_max_count(
-            self, np.ndarray[np.uint8_t, ndim=2] table,
+            np.ndarray[np.uint8_t, ndim=2] table,
             np.ndarray[np.uint8_t, ndim=2] mask,
             np.ndarray[np.uint64_t, ndim=1] bins, int num_bins, int w, int h,
             unsigned char none_val):
@@ -300,6 +342,19 @@ cdef class PolygonCollider(object):
         cdef int x, y
         cdef list points = []
 
+        if self.cspace is not NULL:
+            if self.empty:
+                return points
+
+            for x in range(self.width):
+                for y in range(self.height):
+                    if self.cspace[y * self.width + x]:
+                        points.append((
+                            int(x + self.x_start + self.min_x),
+                            int(y + self.y_start + self.min_y),
+                        ))
+            return points
+
         for x in range(int(floor(self.min_x)), int(ceil(self.max_x)) + 1):
             for y in range(int(floor(self.min_y)), int(ceil(self.max_y)) + 1):
                 if self.collide_point(x, y):
@@ -311,12 +366,20 @@ cdef class PolygonCollider(object):
         (x1, y1, x2, y2), where x1, y1 is the lower left and x2, y2 is the
         upper right point of the rectangle.
         '''
-        return (int(floor(self.min_x)), int(floor(self.min_y)),
-                int(ceil(self.max_x)), int(ceil(self.max_y)))
+        return int(self.min_x), int(self.min_y), int(self.max_x), int(self.max_y)
 
     def get_area(self):
         cdef int x, y
         cdef double count = 0
+
+        if self.cspace is not NULL:
+            if self.empty:
+                return 0
+
+            for x in range(self.width * self.height):
+                if self.cspace[x]:
+                    count += 1
+            return count
 
         for x in range(int(floor(self.min_x)), int(ceil(self.max_x)) + 1):
             for y in range(int(floor(self.min_y)), int(ceil(self.max_y)) + 1):
