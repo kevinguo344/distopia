@@ -811,13 +811,15 @@ class VoronoiApp(App):
                 box.remove_widget(err)
                 box.add_widget(voronoi_widget)
                 voronoi_widget.ros_bridge = self.ros_bridge
+                if self.show_precinct_id:
+                    self.show_precinct_labels(voronoi_widget)
 
             self.ros_bridge = RosBridge(
                 host=self.ros_host, port=self.ros_port,
                 ready_callback=enable_widget)
-
-        if self.show_precinct_id:
-            self.show_precinct_labels(widget)
+        else:
+            if self.show_precinct_id:
+                self.show_precinct_labels(widget)
         self._profiler = widget._profiler = cProfile.Profile()
         return widget
 
