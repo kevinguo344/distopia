@@ -4,7 +4,7 @@ import numpy as np
 import csv
 
 import distopia
-from distopia.app.geo_data import GeoData
+from distopia.app.voronoi_data import GeoData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
 from distopia.precinct.metrics import PrecinctHistogram, PrecinctScalar

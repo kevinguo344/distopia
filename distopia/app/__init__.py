@@ -8,7 +8,7 @@ Runs the application.
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import cycle
-from distopia.app.geo_data import GeoData
+from distopia.app.voronoi_data import GeoData
 
 
 def mpl_plot_data(geo_data):
@@ -31,7 +31,7 @@ def mpl_plot_data(geo_data):
 
 
 if __name__ == '__main__':
-    from distopia.app.geo_data import GeoData
+    from distopia.app.voronoi_data import GeoData
     geo_data = GeoData()
     geo_data.dataset_name = 'WI_Municipal_Wards_Fall_2016'
     geo_data.load_data()

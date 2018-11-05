@@ -35,7 +35,7 @@ from kivy.graphics.context_instructions import \
 from kivy.uix.spinner import Spinner
 
 import distopia
-from distopia.app.geo_data import GeoData
+from distopia.app.voronoi_data import GeoData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
 from distopia.app.ros import RosBridge
