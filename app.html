@@ -40,54 +40,6 @@
 <h2>Distopia Application<a class="headerlink" href="#distopia-application" title="Permalink to this headline">¶</a></h2>
 <p>Runs the application.</p>
 </div>
-<span class="target" id="module-distopia.app.geo_data"></span><div class="section" id="census-and-election-data">
-<h2>Census and Election Data<a class="headerlink" href="#census-and-election-data" title="Permalink to this headline">¶</a></h2>
-<p>Some of our data sources:</p>
-<ul class="simple">
-<li><a class="reference external" href="https://elections.wi.gov/elections-voting/statistics">https://elections.wi.gov/elections-voting/statistics</a></li>
-<li><a class="reference external" href="https://github.com/nvkelso/election-geodata/issues/2">https://github.com/nvkelso/election-geodata/issues/2</a></li>
-<li><a class="reference external" href="https://doi.org/10.7910/DVN/NH5S2I">https://doi.org/10.7910/DVN/NH5S2I</a></li>
-<li><a class="reference external" href="https://hub.arcgis.com/datasets/f0532acbe3304e20a11dbd598c5654f7_0">https://hub.arcgis.com/datasets/f0532acbe3304e20a11dbd598c5654f7_0</a></li>
-<li><a class="reference external" href="https://elections.wi.gov/elections-voting/results/2016/fall-general">https://elections.wi.gov/elections-voting/results/2016/fall-general</a></li>
-<li><a class="reference external" href="https://elections.wi.gov/sites/default/files/11.4.14%20Election%20Results-all%20offices-w%20x%20w%20report.pdf">https://elections.wi.gov/sites/default/files/11.4.14%20Election%20Results-all%20offices-w%20x%20w%20report.pdf</a></li>
-<li><a class="reference external" href="https://www.cityofmadison.com/planning/unit_planning/map_aldermanic/ald_dist_8x10.pdf">https://www.cityofmadison.com/planning/unit_planning/map_aldermanic/ald_dist_8x10.pdf</a></li>
-<li><a class="reference external" href="https://data-wi-dnr.opendata.arcgis.com/datasets/county-boundaries-24k">https://data-wi-dnr.opendata.arcgis.com/datasets/county-boundaries-24k</a></li>
-<li><a class="reference external" href="https://www.arcgis.com/home/item.html?id=62d5782482cd45f2898fe7e3d4272c10">https://www.arcgis.com/home/item.html?id=62d5782482cd45f2898fe7e3d4272c10</a></li>
-</ul>
-<p>We assume that in wisconsin, wards are precincts.</p>
-<dl class="class">
-<dt id="distopia.app.geo_data.GeoData">
-<em class="property">class </em><code class="descclassname">distopia.app.geo_data.</code><code class="descname">GeoData</code><a class="reference internal" href="_modules/distopia/app/geo_data.html#GeoData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.app.geo_data.GeoData" title="Permalink to this definition">¶</a></dt>
-<dd><p>Represents the census data and the polygons associated with the data.</p>
-<dl class="attribute">
-<dt id="distopia.app.geo_data.GeoData.containing_rect">
-<code class="descname">containing_rect</code><em class="property"> = None</em><a class="headerlink" href="#distopia.app.geo_data.GeoData.containing_rect" title="Permalink to this definition">¶</a></dt>
-<dd><p>4-tuple describing the rectangle containing all the polygons.</p>
-<p><code class="docutils literal notranslate"><span class="pre">(min_x,</span> <span class="pre">min_y,</span> <span class="pre">max_x,</span> <span class="pre">max_y)</span></code></p>
-</dd></dl>
-
-<dl class="method">
-<dt id="distopia.app.geo_data.GeoData.generate_polygons">
-<code class="descname">generate_polygons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/app/geo_data.html#GeoData.generate_polygons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.app.geo_data.GeoData.generate_polygons" title="Permalink to this definition">¶</a></dt>
-<dd><p>Converts the shapes in the data into a list of closed polygons,
-described by their vertices.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="distopia.app.geo_data.GeoData.load_data">
-<code class="descname">load_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/app/geo_data.html#GeoData.load_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.app.geo_data.GeoData.load_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads the data from file.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="distopia.app.geo_data.GeoData.scale_to_screen">
-<code class="descname">scale_to_screen</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/distopia/app/geo_data.html#GeoData.scale_to_screen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#distopia.app.geo_data.GeoData.scale_to_screen" title="Permalink to this definition">¶</a></dt>
-<dd><p>Scales the polygons to the screen size.</p>
-</dd></dl>
-
-</dd></dl>
-
-</div>
 </div>
 
 
@@ -116,7 +68,6 @@ described by their vertices.</p>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">State Level Metrics</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Apps</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#distopia-application">Distopia Application</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#census-and-election-data">Census and Election Data</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="ros.html">ROS</a></li>

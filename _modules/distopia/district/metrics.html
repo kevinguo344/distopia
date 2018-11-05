@@ -66,6 +66,12 @@
 
     <span class="n">district</span> <span class="o">=</span> <span class="kc">None</span>
 
+    <span class="n">scalar_value</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">scalar_maximum</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">scalar_label</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">district</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">DistrictAggregateMetric</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">district</span> <span class="o">=</span> <span class="n">district</span>
@@ -80,30 +86,44 @@
 
     <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">:</span>
-            <span class="k">return</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">labels</span>
-        <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">p</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">]</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">precinct_metrics</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span></div>
-
-
-<span class="k">class</span> <span class="nc">DistrictScalarAggregateMetric</span><span class="p">(</span><span class="n">DistrictAggregateMetric</span><span class="p">):</span>
-
-    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">:</span>
             <span class="k">return</span>
 
-        <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">p</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">precinct_metrics</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precinct_metrics</span> <span class="o">=</span> <span class="n">precinct_metrics</span> <span class="o">=</span> \
+            <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">district</span><span class="o">.</span><span class="n">precincts</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">precinct_metrics</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">precinct_metrics</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">precinct_metrics</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">compute_scalar_sum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_metrics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_maximum</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">scalar_maximum</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">precinct_metrics</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">scalar_value</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">precinct_metrics</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_label</span> <span class="o">=</span> <span class="n">precinct_metrics</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scalar_label</span>
+
+    <span class="k">def</span> <span class="nf">compute_scalar_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">precinct_metrics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_metrics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_maximum</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">precinct_metrics</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scalar_maximum</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">scalar_value</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">precinct_metrics</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scalar_label</span> <span class="o">=</span> <span class="n">precinct_metrics</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">scalar_label</span>
+
+    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="s2">&quot;scalar_value&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalar_value</span><span class="p">,</span>
+            <span class="s2">&quot;scalar_maximum&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalar_maximum</span><span class="p">,</span>
+            <span class="s2">&quot;scalar_label&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalar_label</span><span class="p">}</span></div>
 </pre></div>
 
           </div>
