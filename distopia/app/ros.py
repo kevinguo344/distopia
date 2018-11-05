@@ -14,8 +14,6 @@ import json
 import roslibpy
 import logging
 
-from distopia.district.metrics import DistrictHistogramAggregateMetric
-
 __all__ = ('RosBridge', )
 
 
@@ -74,46 +72,25 @@ class RosBridge(object):
 
     def update_voronoi(
             self, fiducials_locations, fiducial_ids, fiducial_logical_ids,
-            districts, state_metrics):
+            districts, district_metrics_fn, state_metrics_fn):
         self._publisher_thread_queue.put(
             ('voronoi',
              (fiducials_locations, fiducial_ids, fiducial_logical_ids,
-              districts, state_metrics)))
+              districts, district_metrics_fn, state_metrics_fn)))
 
     @staticmethod
-    def get_district_metrics(district):
-        metrics = []
-        for metric in district.metrics.values():
-            if isinstance(metric, DistrictHistogramAggregateMetric):
-                item = {
-                    "name": metric.name, "labels": metric.labels,
-                    "data": metric.data}
-            else:
-                assert False, metric
-            metrics.append(item)
-        return metrics
-
-    @staticmethod
-    def get_state_metrics(state_metrics):
-        metrics = []
-        for metric in state_metrics:
-            metric.compute()
-            metrics.append({"name": "something", "labels": [], "data": []})
-        return metrics
-
     def make_computation_packet(
-            self, fiducials_locations, fiducial_ids, fiducial_logical_ids,
-            districts, state_metrics):
-        state_data = self.get_state_metrics(state_metrics)
+            fiducials_locations, fiducial_ids, fiducial_logical_ids,
+            districts, district_metrics_fn, state_metrics_fn):
+        district_metrics_fn(districts)
+        state_data = [m.get_data() for m in state_metrics_fn(districts)]
 
         districts_data = []
         for district in districts:
-            district.compute_metrics()
-
             district_data = {
                 'district_id': district.identity,
                 'precincts': [p.identity for p in district.precincts],
-                'metrics': self.get_district_metrics(district)
+                'metrics': [m.get_data() for m in district.metrics.values()]
             }
             districts_data.append(district_data)
 

@@ -5,8 +5,7 @@ Precinct Metrics
 Defines metrics that are specific to Precincts.
 """
 
-__all__ = ('PrecinctMetric', 'PrecinctHistogram', 'PrecinctScalar',
-           'PrecinctCategory')
+__all__ = ('PrecinctMetric', 'PrecinctHistogram')
 
 
 class PrecinctMetric(object):
@@ -17,9 +16,20 @@ class PrecinctMetric(object):
     """A globally unique metric name that describes the metric.
     """
 
-    def __init__(self, name, **kwargs):
+    scalar_value = 0
+
+    scalar_maximum = 0
+
+    scalar_label = ''
+
+    def __init__(
+            self, name, scalar_value=0, scalar_maximum=0, scalar_label='',
+            **kwargs):
         super(PrecinctMetric, self).__init__(**kwargs)
         self.name = name
+        self.scalar_value = scalar_value
+        self.scalar_maximum = scalar_maximum
+        self.scalar_label = scalar_label
 
 
 class PrecinctHistogram(PrecinctMetric):
@@ -33,20 +43,9 @@ class PrecinctHistogram(PrecinctMetric):
         self.data = data
         self.labels = labels
 
-
-class PrecinctScalar(PrecinctMetric):
-
-    value = 0
-
-    def __init__(self, value, **kwargs):
-        super(PrecinctScalar, self).__init__(**kwargs)
-        self.value = value
-
-
-class PrecinctCategory(PrecinctMetric):
-
-    value = 0
-
-    def __init__(self, value, **kwargs):
-        super(PrecinctCategory, self).__init__(**kwargs)
-        self.value = value
+    def get_data(self):
+        return {
+            "name": self.name, "labels": self.labels, "data": self.data,
+            "scalar_value": self.scalar_value,
+            "scalar_maximum": self.scalar_maximum,
+            "scalar_label": self.scalar_label}

@@ -21,8 +21,7 @@
     "occupation",
     "population",
     "projected_votes",
-    "race",
-    "sex"
+    "race"
   ],
   "metrics": [
     "age",
@@ -31,8 +30,7 @@
     "occupation",
     "population",
     "projected_votes",
-    "race",
-    "sex"
+    "race"
   ],
   "ros_host": "localhost",
   "ros_port": 9090,

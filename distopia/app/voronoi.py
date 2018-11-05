@@ -35,13 +35,10 @@ from kivy.graphics.context_instructions import \
 from kivy.uix.spinner import Spinner
 
 import distopia
-from distopia.app.voronoi_data import GeoData
+from distopia.app.voronoi_data import GeoData, MetricData
 from distopia.precinct import Precinct
 from distopia.mapping.voronoi import VoronoiMapping
 from distopia.app.ros import RosBridge
-from distopia.precinct.metrics import PrecinctHistogram, PrecinctScalar
-from distopia.district.metrics import DistrictHistogramAggregateMetric, \
-    DistrictScalarAggregateMetric
 
 __all__ = ('VoronoiWidget', 'VoronoiApp')
 
@@ -570,14 +567,11 @@ class VoronoiWidget(Widget):
             post_callback(*largs)
 
         if not error:
-            self.district_metrics_fn(districts)
-            state_metrics = self.state_metrics_fn(districts)
-
             fid_ids = [self.district_blocks_fid[i] for i in fiducial_identity]
             if self.ros_bridge is not None:
                 self.ros_bridge.update_voronoi(
                     fiducial_pos, fid_ids, fiducial_identity, districts,
-                    state_metrics)
+                    self.district_metrics_fn, self.state_metrics_fn)
             if not districts:
                 self.clear_voronoi()
                 return
@@ -656,38 +650,17 @@ class VoronoiApp(App):
 
     focus_metric_height = 100
 
-    def create_district_metrics(self, districts):
-        for district in districts:
-            for name in self.metrics:
-                district.metrics[name] = \
-                    DistrictHistogramAggregateMetric(
-                        district=district, name=name)
+    metric_data = None
 
-    def load_precinct_metrics(self):
+    def load_metrics(self):
         assert self.use_county_dataset
-
-        geo_data = self.geo_data
-        names = set(r[3] for r in geo_data.records)
-        names = {v: v for v in names}
-        names['Saint Croix'] = 'St. Croix'
-
+        names = {'Saint Croix': 'St. Croix'}
         root = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'aggregate')
-        for name in self.metrics:
 
-            fname = os.path.join(root, '{}.csv'.format(name))
-            with open(fname) as fh:
-                reader = csv.reader(fh, delimiter='\t')
-                header = next(reader)[1:]
-
-                data = {}
-                for row in reader:
-                    data[row[0]] = list(map(float, row[1:]))
-
-            for precinct, record in zip(self.precincts, geo_data.records):
-                precinct_name = names[record[3]]
-                precinct.metrics[name] = PrecinctHistogram(
-                    name=name, labels=header, data=data[precinct_name])
+        self.metric_data = MetricData(
+            root_path=root, metrics=self.metrics, precinct_names_map=names,
+            precincts=self.precincts)
 
     def load_precinct_adjacency(self):
         assert self.use_county_dataset
@@ -700,9 +673,6 @@ class VoronoiApp(App):
         precincts = self.precincts
         for i, neighbours in counties.items():
             precincts[int(i)].neighbours = [precincts[p] for p in neighbours]
-
-    def create_state_metrics(self, districts):
-        return []
 
     def create_voronoi(self):
         """Loads and initializes all the data and voronoi mapping.
@@ -731,7 +701,7 @@ class VoronoiApp(App):
         for i, (record, polygons) in enumerate(
                 zip(geo_data.records, geo_data.polygons)):
             precinct = Precinct(
-                name=str(record[0]), boundary=polygons[0].reshape(-1).tolist(),
+                name=record[3], boundary=polygons[0].reshape(-1).tolist(),
                 identity=i, location=polygons[0].mean(axis=0).tolist())
             precincts.append(precinct)
 
@@ -789,7 +759,7 @@ class VoronoiApp(App):
             mat = np.loadtxt(fname, delimiter=',', skiprows=3)
 
         self.create_voronoi()
-        self.load_precinct_metrics()
+        self.load_metrics()
         self.load_precinct_adjacency()
 
         widget = VoronoiWidget(
@@ -799,8 +769,8 @@ class VoronoiApp(App):
             district_blocks_fid=self.district_blocks_fid,
             focus_block_fid=self.focus_block_fid,
             focus_block_logical_id=self.focus_block_logical_id,
-            district_metrics_fn=self.create_district_metrics,
-            state_metrics_fn=self.create_state_metrics,
+            district_metrics_fn=self.metric_data.compute_district_metrics,
+            state_metrics_fn=self.metric_data.create_state_metrics,
             show_voronoi_boundaries=self.show_voronoi_boundaries,
             focus_metrics=self.focus_metrics, screen_size=self.screen_size,
             focus_metric_height=self.focus_metric_height,

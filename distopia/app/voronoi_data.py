@@ -18,13 +18,17 @@ We assume that in wisconsin, wards are precincts.
 """
 
 import os.path
-import distopia
 import numpy as np
 import math
 import json
 import zipfile
+import csv
 
-__all__ = ('GeoData', )
+import distopia
+from distopia.precinct.metrics import PrecinctHistogram
+from distopia.district.metrics import DistrictHistogramAggregateMetric
+
+__all__ = ('GeoData', 'MetricData')
 
 
 class GeoData(object):
@@ -225,3 +229,68 @@ class GeoData(object):
                 polygon[:, 0] *= ratio
                 polygon[:, 1] -= min_y
                 polygon[:, 1] *= ratio
+
+
+class MetricData(object):
+
+    root_path = ''
+
+    precinct_names_map = {}
+
+    metrics = []
+
+    precincts = []
+
+    def __init__(self, root_path, precinct_names_map, metrics, precincts,
+                 **kwargs):
+        super(MetricData, self).__init__(**kwargs)
+        self.root_path = root_path
+        self.precinct_names_map = precinct_names_map
+        self.metrics = metrics
+        self.precincts = precincts
+
+        self.load_precinct_data()
+
+    def load_precinct_data(self):
+        root = self.root_path
+        for metric_name in self.metrics:
+            fname = os.path.join(root, '{}.csv'.format(metric_name))
+            with open(fname) as fh:
+                reader = csv.reader(fh)
+                header = next(reader)[1:]
+
+                data = {}
+                for row in reader:
+                    data[row[0]] = list(map(float, row[1:]))
+
+            f = getattr(self, 'load_{}_precinct_data'.format(metric_name), None)
+            if f is None:
+                self._precinct_histogram(metric_name, header, data)
+            else:
+                f(header, data)
+
+    def _precinct_histogram(self, metric_name, header, data):
+        names = self.precinct_names_map
+        for precinct in self.precincts:
+            precinct_name = names.get(precinct.name, precinct.name)
+            precinct_data = data[precinct_name]
+            precinct.metrics[metric_name] = PrecinctHistogram(
+                name=metric_name, labels=header[2:], data=precinct_data[2:],
+                scalar_label=header[0], scalar_maximum=precinct_data[1],
+                scalar_value=precinct_data[0])
+
+    def compute_district_metrics(self, districts):
+        for metric_name in self.metrics:
+            fn_name = 'compute_scalar_sum'
+            if metric_name in ('age', 'income'):
+                fn_name = 'compute_scalar_mean'
+
+            for district in districts:
+                metric = district.metrics[metric_name] = \
+                    DistrictHistogramAggregateMetric(
+                        district=district, name=metric_name)
+                metric.compute()
+                getattr(metric, fn_name)()
+
+    def create_state_metrics(self, districts):
+        return []
