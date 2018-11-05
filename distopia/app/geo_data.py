@@ -19,9 +19,7 @@ We assume that in wisconsin, wards are precincts.
 
 import os.path
 import distopia
-import shapefile
 import numpy as np
-from pyproj import Proj, transform
 import math
 import json
 import zipfile
@@ -63,6 +61,7 @@ class GeoData(object):
     def load_data(self):
         """Loads the data from file.
         """
+        import shapefile
         data_path = os.path.join(self.data_path, self.dataset_name)
         shp = shapefile.Reader(data_path)
 
@@ -137,6 +136,7 @@ class GeoData(object):
         """Converts the shapes in the data into a list of closed polygons,
         described by their vertices.
         """
+        from pyproj import Proj, transform
         src, target = self.source_coordinates, self.target_coordinates
         if not src or not target:
             trans = lambda _0, _1, lon, lat: (lon, lat)

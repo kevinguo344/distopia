@@ -770,6 +770,12 @@ class VoronoiApp(App):
         with open(fname, 'w') as fp:
             json.dump(config, fp, indent=2, sort_keys=True)
 
+        for metric in self.focus_metrics:
+            if metric not in self.metrics:
+                raise ValueError(
+                    'Cannot enable focus metric "{}" because it\'s not in '
+                    'metrics "{}"'.format(metric, self.metrics))
+
     def build(self):
         """Builds the GUI.
         """
