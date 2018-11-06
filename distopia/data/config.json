@@ -23,6 +23,8 @@
     "projected_votes",
     "race"
   ],
+  "log_data": true,
+  "max_fiducials_per_district": 5,
   "metrics": [
     "age",
     "education",
@@ -30,7 +32,8 @@
     "occupation",
     "population",
     "projected_votes",
-    "race"
+    "race",
+    "pvi"
   ],
   "ros_host": "localhost",
   "ros_port": 9090,

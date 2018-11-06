@@ -26,7 +26,8 @@ import csv
 
 import distopia
 from distopia.precinct.metrics import PrecinctHistogram
-from distopia.district.metrics import DistrictHistogramAggregateMetric
+from distopia.district.metrics import DistrictHistogramAggregateMetric, \
+    DistrictScalarMetric
 
 __all__ = ('GeoData', 'MetricData')
 
@@ -254,6 +255,12 @@ class MetricData(object):
     def load_precinct_data(self):
         root = self.root_path
         for metric_name in self.metrics:
+            if metric_name == 'pvi':
+                if 'projected_votes' not in self.metrics:
+                    raise ValueError(
+                        'Cannot compute PVI without projected_votes')
+                continue
+
             fname = os.path.join(root, '{}.csv'.format(metric_name))
             with open(fname) as fh:
                 reader = csv.reader(fh)
@@ -281,6 +288,9 @@ class MetricData(object):
 
     def compute_district_metrics(self, districts):
         for metric_name in self.metrics:
+            if metric_name == 'pvi':
+                continue
+
             fn_name = 'compute_scalar_sum'
             if metric_name in ('age', 'income'):
                 fn_name = 'compute_scalar_mean'
@@ -291,6 +301,16 @@ class MetricData(object):
                         district=district, name=metric_name)
                 metric.compute()
                 getattr(metric, fn_name)()
+
+        if 'pvi' in self.metrics:
+            for district in districts:
+                metric = district.metrics['pvi'] = DistrictScalarMetric(
+                    district=district, name='pvi')
+                vote1, vote2 = district.metrics['projected_votes'].data
+
+                if vote1 < vote2:
+                    vote1, vote2 = vote2, vote1
+                metric.set_value(vote1 - (vote1 + vote2) / 2., 'pvi')
 
     def create_state_metrics(self, districts):
         return []

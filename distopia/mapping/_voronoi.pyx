@@ -26,6 +26,7 @@ cdef extern from "math.h":
     double ceil(double val)
     double pow(double x, double y)
     double sqrt(double x)
+    double abs(double x)
 
 
 @cython.boundscheck(False)
@@ -369,8 +370,11 @@ cdef class PolygonCollider(object):
         return int(self.min_x), int(self.min_y), int(self.max_x), int(self.max_y)
 
     def get_area(self):
-        cdef int x, y
+        cdef int x, y, i
         cdef double count = 0
+
+        if self.count < 2:
+            return 0.
 
         if self.cspace is not NULL:
             if self.empty:
@@ -381,11 +385,16 @@ cdef class PolygonCollider(object):
                     count += 1
             return count
 
-        for x in range(int(floor(self.min_x)), int(ceil(self.max_x)) + 1):
-            for y in range(int(floor(self.min_y)), int(ceil(self.max_y)) + 1):
-                if self.collide_point(x, y):
-                    count += 1
-        return count
+        # https://www.mathopenref.com/coordpolygonarea.html
+        for i in range(self.count - 1):
+            count += self.cpoints[2 * i] * self.cpoints[2 * (i + 1) + 1]
+            count -= self.cpoints[2 * i + 1] * self.cpoints[2 * (i + 1)]
+
+        i = self.count - 1
+        count += self.cpoints[2 * i] * self.cpoints[1]
+        count -= self.cpoints[2 * i + 1] * self.cpoints[0]
+        count /= 2.
+        return abs(count)
 
     def get_centroid(self):
         cdef double x = 0

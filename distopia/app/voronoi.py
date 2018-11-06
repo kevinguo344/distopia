@@ -21,6 +21,7 @@ from functools import cmp_to_key
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.togglebutton import ToggleButton
 from kivy.lang import Builder
 from kivy.app import App
 from kivy.graphics.vertex_instructions import Line, Point, Mesh
@@ -135,7 +136,9 @@ class VoronoiWidget(Widget):
 
     n_focus_cols = 0
 
-    gui_touch_spinner = None
+    gui_touch_focus_buttons = None
+
+    max_fiducials_per_district = 5
 
     def __init__(
         self, voronoi_mapping=None, table_mode=False, align_mat=None,
@@ -144,7 +147,7 @@ class VoronoiWidget(Widget):
         state_metrics_fn=None,
         show_voronoi_boundaries=False, focus_metrics=[],
         focus_metric_width=100, focus_metric_height=100,
-            screen_size=(1920, 1080), **kwargs):
+            screen_size=(1920, 1080), max_fiducials_per_district=5, **kwargs):
         super(VoronoiWidget, self).__init__(**kwargs)
         self.voronoi_mapping = voronoi_mapping
         self.ros_bridge = ros_bridge
@@ -152,6 +155,7 @@ class VoronoiWidget(Widget):
         self.focus_block_fid = focus_block_fid
         self.focus_block_logical_id = focus_block_logical_id
         self.show_voronoi_boundaries = show_voronoi_boundaries
+        self.max_fiducials_per_district = max_fiducials_per_district
 
         self.focus_metrics = focus_metrics
         self.focus_metric_width = focus_metric_width
@@ -162,17 +166,34 @@ class VoronoiWidget(Widget):
         self.focus_region_width = cols * focus_metric_width
 
         if not self.table_mode:
-            spinner = self.gui_touch_spinner = GuiTouchClassSpinner(
-                district_blocks_fid=self.district_blocks_fid,
-                focus_block_logical_id=self.focus_block_logical_id)
-            spinner.pos = self.focus_region_width, 0
-            spinner.size = '100dp', '34dp'
+            h = 34 * len(self.district_blocks_fid) + 5 * (
+                len(self.district_blocks_fid) - 1)
+            box = self.gui_touch_focus_buttons = BoxLayout(
+                orientation='vertical', size=('100dp', '{}dp'.format(h)),
+                spacing='5dp', pos=(self.focus_region_width, 0))
 
-            def update_current_fid(*largs):
-                self.current_fid_id = spinner.fid_id
-            spinner.fbind('fid_id', update_current_fid)
-            update_current_fid()
-            self.add_widget(spinner)
+            for val in self.district_blocks_fid:
+                btn = ToggleButton(
+                    text='District {}'.format(val), group='focus',
+                    allow_no_selection=False)
+                box.add_widget(btn)
+
+                def update_current_fid(*largs, button=btn, value=val):
+                    if button.state == 'down':
+                        self.current_fid_id = value
+                btn.fbind('state', update_current_fid)
+
+            btn = ToggleButton(
+                text='Focus', group='focus', allow_no_selection=False)
+            box.add_widget(btn)
+
+            def update_current_fid(*largs, button=btn):
+                if button.state == 'down':
+                    self.current_fid_id = self.focus_block_logical_id
+            btn.fbind('state', update_current_fid)
+
+            box.children[-1].state = 'down'
+            self.add_widget(box)
 
         i = 0
         for col in range(cols):
@@ -231,24 +252,22 @@ class VoronoiWidget(Widget):
                             vertices=vertices, indices=indices,
                             mode="triangle_fan"))
 
-                graphics.append(
-                    Color(rgba=(0, 1, 0, 1)))
-                graphics.append(
-                    Line(points=precinct.boundary, width=1))
+                graphics.append(Color(rgba=(0, 1, 0, 1)))
+                graphics.append(Line(points=precinct.boundary, width=1))
                 precinct_graphics[precinct] = graphics
             PopMatrix()
 
     def on_touch_down(self, touch):
         if not self.table_mode:
-            if self.gui_touch_spinner.collide_point(*touch.pos):
-                return self.gui_touch_spinner.on_touch_down(touch)
+            if self.gui_touch_focus_buttons.collide_point(*touch.pos):
+                return self.gui_touch_focus_buttons.on_touch_down(touch)
             return self.gui_touch_down(touch)
         return self.fiducial_down(touch)
 
     def on_touch_move(self, touch):
         if not self.table_mode and \
-                self.gui_touch_spinner.collide_point(*touch.pos):
-            return self.gui_touch_spinner.on_touch_down(touch)
+                self.gui_touch_focus_buttons.collide_point(*touch.pos):
+            return self.gui_touch_focus_buttons.on_touch_down(touch)
 
         if touch.uid not in self.touches:
             return False
@@ -259,8 +278,8 @@ class VoronoiWidget(Widget):
 
     def on_touch_up(self, touch):
         if not self.table_mode and \
-                self.gui_touch_spinner.collide_point(*touch.pos):
-            return self.gui_touch_spinner.on_touch_down(touch)
+                self.gui_touch_focus_buttons.collide_point(*touch.pos):
+            return self.gui_touch_focus_buttons.on_touch_down(touch)
 
         if touch.uid not in self.touches:
             return False
@@ -455,8 +474,14 @@ class VoronoiWidget(Widget):
         #     color = Color(rgba=(1, 1, 1, 1))
         #     point = Point(points=pos, pointsize=7)
 
+        current_id = self.current_fid_id
+        if len(
+                [1 for val in self.voronoi_mapping.get_fiducial_ids().values()
+                 if val == current_id]) >= self.max_fiducials_per_district:
+            return True
+
         key = self.add_fiducial(
-            (x - self.focus_region_width, y), self.current_fid_id)
+            (x - self.focus_region_width, y), current_id)
 
         label = self.fiducial_graphics[key] = Label(
             text=str(self.current_fid_id), center=tuple(map(float, pos)),
@@ -652,6 +677,10 @@ class VoronoiApp(App):
 
     metric_data = None
 
+    log_data = False
+
+    max_fiducials_per_district = 5
+
     def load_metrics(self):
         assert self.use_county_dataset
         names = {'Saint Croix': 'St. Croix'}
@@ -723,7 +752,8 @@ class VoronoiApp(App):
                 'show_precinct_id', 'focus_block_fid',
                 'focus_block_logical_id', 'district_blocks_fid', 'use_ros',
                 'metrics', 'ros_host', 'ros_port', 'show_voronoi_boundaries',
-                'focus_metrics', 'focus_metric_width', 'focus_metric_height']
+                'focus_metrics', 'focus_metric_width', 'focus_metric_height',
+                'log_data', 'max_fiducials_per_district']
 
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
@@ -774,7 +804,8 @@ class VoronoiApp(App):
             show_voronoi_boundaries=self.show_voronoi_boundaries,
             focus_metrics=self.focus_metrics, screen_size=self.screen_size,
             focus_metric_height=self.focus_metric_height,
-            focus_metric_width=self.focus_metric_width)
+            focus_metric_width=self.focus_metric_width,
+            max_fiducials_per_district=self.max_fiducials_per_district)
 
         if self.use_ros:
             box = BoxLayout()
@@ -792,7 +823,7 @@ class VoronoiApp(App):
 
             self.ros_bridge = RosBridge(
                 host=self.ros_host, port=self.ros_port,
-                ready_callback=enable_widget)
+                ready_callback=enable_widget, log_data=self.log_data)
         else:
             if self.show_precinct_id:
                 self.show_precinct_labels(widget)

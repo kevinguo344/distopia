@@ -13,6 +13,9 @@ except ImportError:
 import json
 import roslibpy
 import logging
+import datetime
+import os
+import distopia
 
 __all__ = ('RosBridge', )
 
@@ -29,8 +32,12 @@ class RosBridge(object):
 
     ready_callback = None
 
-    def __init__(self, host="localhost", port=9090, ready_callback=None):
+    log_data = False
+
+    def __init__(self, host="localhost", port=9090, ready_callback=None,
+                 log_data=False):
         self.ready_callback = ready_callback
+        self.log_data = log_data
 
         self.ros = ros = roslibpy.Ros(host=host, port=port)
         ros.on_ready(self.start_publisher_thread)
@@ -105,39 +112,83 @@ class RosBridge(object):
 
         return state_data, districts_data, blocks_data
 
+    def create_log_file(self):
+        root = os.path.join(os.path.dirname(distopia.__file__), 'logs')
+        if not os.path.exists(root):
+            os.mkdir(root)
+
+        t = '{}'.format(datetime.datetime.utcnow()).replace(':', '.')
+        fname = os.path.join(root, 'distopia_log_{}.json'.format(t))
+        i = 1
+
+        while os.path.exists(fname):
+            fname = os.path.join(root, 'distopia_log_{}-{}.json'.format(t, i))
+            i += 1
+        return open(fname, 'w')
+
     def publisher_thread_function(
             self, designs_topic, blocks_topic, tuio_topic):
         assert self.ros is not None
         queue = self._publisher_thread_queue
         packet_count = 0
 
-        while True:
-            item, val = queue.get(block=True)
-            if item == 'eof':
-                tuio_topic.unadvertise()
-                blocks_topic.unadvertise()
-                designs_topic.unadvertise()
-                return
+        fh = None
+        first = True
+        if self.log_data:
+            fh = self.create_log_file()
+            fh.write('[')
 
-            if item == 'focus':
-                focus_district, focus_param = val
-                cmd = 'focus_district' if focus_district else 'focus_state'
-                param = str(focus_param)
-                encoded_str = json.dumps({'cmd': cmd, 'param': param})
+        try:
+            while True:
+                item, val = queue.get(block=True)
+                if item == 'eof':
+                    tuio_topic.unadvertise()
+                    blocks_topic.unadvertise()
+                    designs_topic.unadvertise()
+                    return
 
-                tuio_topic.publish({'data': encoded_str})
-            elif item == 'voronoi':
-                state_data, districts_data, blocks_data = \
-                    self.make_computation_packet(*val)
+                if item == 'focus':
+                    focus_district, focus_param = val
+                    cmd = 'focus_district' if focus_district else 'focus_state'
+                    param = str(focus_param)
 
-                count = packet_count
-                packet_count += 1
+                    obj = {'cmd': cmd, 'param': param}
+                    tuio_topic.publish({'data': json.dumps(obj)})
 
-                encoded_str = json.dumps(
-                    {'count': count, 'districts': districts_data,
-                     'metrics': state_data})
-                designs_topic.publish({'data': encoded_str})
+                    log_obj = {
+                        'focus': obj,
+                        'utc_time': '{}'.format(datetime.datetime.utcnow())
+                    }
+                elif item == 'voronoi':
+                    state_data, districts_data, blocks_data = \
+                        self.make_computation_packet(*val)
 
-                encoded_str = json.dumps(
-                    {'count': count, 'fiducials': blocks_data})
-                blocks_topic.publish({'data': encoded_str})
+                    count = packet_count
+                    packet_count += 1
+
+                    districts_obj = {
+                        'count': count, 'districts': districts_data,
+                        'metrics': state_data}
+                    designs_topic.publish({'data': json.dumps(districts_obj)})
+
+                    fiducials_obj = {'count': count, 'fiducials': blocks_data}
+                    blocks_topic.publish({'data': json.dumps(fiducials_obj)})
+
+                    log_obj = {
+                        'districts': districts_obj,
+                        'fiducials': fiducials_obj,
+                        'utc_time': '{}'.format(datetime.datetime.utcnow())
+                    }
+                else:
+                    assert False
+
+                if fh is not None:
+                    if first:
+                        first = False
+                    else:
+                        fh.write(',\n')
+                    json.dump(log_obj, fh)
+        finally:
+            if fh is not None:
+                fh.write('\n]')
+                fh.close()

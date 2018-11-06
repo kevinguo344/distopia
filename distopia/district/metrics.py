@@ -8,7 +8,7 @@ and other metadata.
 import numpy as np
 
 __all__ = ('DistrictMetric', 'DistrictAggregateMetric',
-           'DistrictHistogramAggregateMetric')
+           'DistrictHistogramAggregateMetric', 'DistrictScalarMetric')
 
 
 class DistrictMetric(object):
@@ -69,6 +69,9 @@ class DistrictHistogramAggregateMetric(DistrictAggregateMetric):
         self.data = np.sum(np.array(data), axis=0).tolist()
 
     def compute_scalar_sum(self):
+        if not self.district.precincts:
+            return
+
         precinct_metrics = self.precinct_metrics
         self.scalar_maximum = float(
             np.sum([m.scalar_maximum for m in precinct_metrics]))
@@ -77,11 +80,39 @@ class DistrictHistogramAggregateMetric(DistrictAggregateMetric):
         self.scalar_label = precinct_metrics[0].scalar_label
 
     def compute_scalar_mean(self):
+        if not self.district.precincts:
+            return
+
         precinct_metrics = self.precinct_metrics
         self.scalar_maximum = float(precinct_metrics[0].scalar_maximum)
         self.scalar_value = float(
             np.mean([m.scalar_value for m in precinct_metrics]))
         self.scalar_label = precinct_metrics[0].scalar_label
+
+    def get_data(self):
+        return {
+            "name": self.name, "labels": self.labels, "data": self.data,
+            "scalar_value": self.scalar_value,
+            "scalar_maximum": self.scalar_maximum,
+            "scalar_label": self.scalar_label}
+
+
+class DistrictScalarMetric(DistrictAggregateMetric):
+
+    data = []
+
+    labels = []
+
+    precinct_metrics = []
+
+    def compute(self):
+        raise NotImplementedError
+
+    def set_value(self, value, label):
+        self.labels = [label]
+        self.data = [value]
+        self.scalar_label = label
+        self.scalar_maximum = self.scalar_value = value
 
     def get_data(self):
         return {

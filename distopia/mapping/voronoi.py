@@ -34,11 +34,6 @@ class VoronoiMapping(object):
     """A list of all the :class:`distopia.precinct.Precinct` instances.
     """
 
-    precinct_colliders = []
-    """A list of :class:`~distopia.utils.PolygonCollider`, each corresponding
-    to a precinct in :attr:`precincts`.
-    """
-
     districts = []
     """A list of all current :class:`distopia.district.District` instances.
     """
@@ -82,7 +77,6 @@ class VoronoiMapping(object):
         self.sites = []
         self.precincts = []
         self.districts = []
-        self.precinct_colliders = []
         self.fiducial_locations = {}
         self.fiducial_ids = {}
         self.thread_lock = Lock()
@@ -106,11 +100,6 @@ class VoronoiMapping(object):
         fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
         unique_ids = list(sorted(set(fiducial_identity)))
 
-        # w, h = self.screen_size
-        # pixel_district_map = np.empty((w, h), dtype=np.uint8)
-        # fill_voronoi_diagram(
-        #     pixel_district_map, w, h, np.array(fiducial_pos, dtype=np.float64),
-        #     np.array(fiducial_identity, dtype=np.uint8))
         pixel_district_map = self.compute_district_pixels(
             np.asarray(fiducial_pos), fiducial_identity, unique_ids)
         precinct_assignment = self.assign_precincts_to_districts(
@@ -120,7 +109,7 @@ class VoronoiMapping(object):
         if error:
             return []
 
-        self.set_districts_boundary(districts)
+        self.set_districts_boundary(districts, precinct_assignment)
 
         self.districts = districts
         self.pixel_district_map = pixel_district_map
@@ -190,7 +179,7 @@ class VoronoiMapping(object):
                         callback(districts, [], [], error)
                     continue
 
-                self.set_districts_boundary(districts)
+                self.set_districts_boundary(districts, precinct_assignment)
 
             except Exception as e:
                 logging.exception(e)
@@ -252,13 +241,10 @@ class VoronoiMapping(object):
         self.pixel_precinct_map = pixel_precinct_map = np.ones(
             (w, h), dtype=dtype) * np.iinfo(dtype).max
 
-        colliders = self.precinct_colliders = [
-            PolygonCollider(
-                points=precinct.boundary, cache=True, rect=(0, 0, w, h)) for
-            precinct in precincts]
-
         precinct_indices = self.precinct_indices = []
-        for i, (precinct, collider) in enumerate(zip(precincts, colliders)):
+        for i, precinct in enumerate(precincts):
+            collider = precinct.collider = PolygonCollider(
+                points=precinct.boundary, cache=True, rect=(0, 0, w, h))
             getattr(collider, f)(pixel_precinct_map, w, h, i)
 
             x1, y1, x2, y2 = collider.bounding_box()
@@ -360,8 +346,9 @@ class VoronoiMapping(object):
 
         return districts, disconnected
 
-    def set_districts_boundary(self, districts):
-        pass
+    def set_districts_boundary(self, districts, precinct_assignment):
+        for district, precincts in zip(districts, precinct_assignment):
+            pass
 
     def assign_precincts_to_districts(self, n_districts, pixel_district_map):
         """Uses the pre-computed precinct and district maps and assigns
@@ -375,10 +362,10 @@ class VoronoiMapping(object):
         precinct_assignment = [[] for _ in range(n_districts)]
 
         bins = np.empty((n_districts, ), dtype=np.uint64)
-        for i, (precinct, (x0, y0, x1, y1, mask), collider) in enumerate(
-                zip(precincts, self.precinct_indices, self.precinct_colliders)):
+        for i, (precinct, (x0, y0, x1, y1, mask)) in enumerate(
+                zip(precincts, self.precinct_indices)):
             bins[:] = 0
-            district_i = collider.get_arg_max_count(
+            district_i = precinct.collider.get_arg_max_count(
                 pixel_district_map[x0:x1, y0:y1],
                 mask, bins, n_districts,
                 x1 - x0, y1 - y0, 2 ** 8 - 1)
@@ -400,28 +387,20 @@ class VoronoiMapping(object):
         pixel_district_map is filled in with the index of the district
         identity in unique_ids to make it 0-n-1.
         """
-        t0 = time.clock()
         vor = Voronoi(fiducials)
-        t1 = time.clock()
         regions, vertices = self.voronoi_finite_polygons_2d(vor)
-        t2 = time.clock()
         assert len(regions) <= 2 ** 8 - 2
         w, h = self.screen_size
         pixel_district_map = np.ones((w, h), dtype=np.uint8) * (2 ** 8 - 1)
 
-        colliders = []
         for i, region_indices in enumerate(regions):
             poly = list(map(float, vertices[region_indices].reshape((-1, ))))
-            collider = PolygonCollider(points=poly, cache=True, rect=(0, 0, w, h))
-            colliders.append(collider)
+            collider = PolygonCollider(
+                points=poly, cache=True, rect=(0, 0, w, h))
 
-        t3 = time.clock()
-        for i, (region_indices, collider) in enumerate(zip(regions, colliders)):
             idx = unique_ids.index(fiducials_identity[i])
             collider.mark_pixels_u8(pixel_district_map, w, h, idx)
 
-        t4 = time.clock()
-        # print("{:0.5f}, {:0.5f}, {:0.5f}, {:0.5f}".format(t1 - t0, t2 - t1, t3 - t2, t4 - t3))
         return pixel_district_map
 
     def voronoi_finite_polygons_2d(self, vor):

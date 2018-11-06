@@ -47,6 +47,8 @@ class Precinct(object):
     contains the metric data for this precinct.
     """
 
+    collider = None
+
     def __init__(self, boundary=None, identity=0, name='', location=(0, 0),
                  **kwargs):
         super(Precinct, self).__init__(**kwargs)
