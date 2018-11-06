@@ -48,6 +48,9 @@
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">roslibpy</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">distopia</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;RosBridge&#39;</span><span class="p">,</span> <span class="p">)</span>
 
@@ -64,8 +67,12 @@
 
     <span class="n">ready_callback</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">9090</span><span class="p">,</span> <span class="n">ready_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">log_data</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">9090</span><span class="p">,</span> <span class="n">ready_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">log_data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ready_callback</span> <span class="o">=</span> <span class="n">ready_callback</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_data</span> <span class="o">=</span> <span class="n">log_data</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="o">=</span> <span class="n">ros</span> <span class="o">=</span> <span class="n">roslibpy</span><span class="o">.</span><span class="n">Ros</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
         <span class="n">ros</span><span class="o">.</span><span class="n">on_ready</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_publisher_thread</span><span class="p">)</span>
@@ -140,42 +147,86 @@
 
         <span class="k">return</span> <span class="n">state_data</span><span class="p">,</span> <span class="n">districts_data</span><span class="p">,</span> <span class="n">blocks_data</span>
 
+    <span class="k">def</span> <span class="nf">create_log_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">distopia</span><span class="o">.</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;logs&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;distopia_log_</span><span class="si">{}</span><span class="s1">.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">while</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;distopia_log_</span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">publisher_thread_function</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span> <span class="n">designs_topic</span><span class="p">,</span> <span class="n">blocks_topic</span><span class="p">,</span> <span class="n">tuio_topic</span><span class="p">):</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">ros</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_publisher_thread_queue</span>
         <span class="n">packet_count</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;eof&#39;</span><span class="p">:</span>
-                <span class="n">tuio_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
-                <span class="n">blocks_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
-                <span class="n">designs_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
-                <span class="k">return</span>
+        <span class="n">fh</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_data</span><span class="p">:</span>
+            <span class="n">fh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_log_file</span><span class="p">()</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
-                <span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span> <span class="o">=</span> <span class="n">val</span>
-                <span class="n">cmd</span> <span class="o">=</span> <span class="s1">&#39;focus_district&#39;</span> <span class="k">if</span> <span class="n">focus_district</span> <span class="k">else</span> <span class="s1">&#39;focus_state&#39;</span>
-                <span class="n">param</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_param</span><span class="p">)</span>
-                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;cmd&#39;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">,</span> <span class="s1">&#39;param&#39;</span><span class="p">:</span> <span class="n">param</span><span class="p">})</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">item</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;eof&#39;</span><span class="p">:</span>
+                    <span class="n">tuio_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                    <span class="n">blocks_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                    <span class="n">designs_topic</span><span class="o">.</span><span class="n">unadvertise</span><span class="p">()</span>
+                    <span class="k">return</span>
 
-                <span class="n">tuio_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span>
-            <span class="k">elif</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;voronoi&#39;</span><span class="p">:</span>
-                <span class="n">state_data</span><span class="p">,</span> <span class="n">districts_data</span><span class="p">,</span> <span class="n">blocks_data</span> <span class="o">=</span> \
-                    <span class="bp">self</span><span class="o">.</span><span class="n">make_computation_packet</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;focus&#39;</span><span class="p">:</span>
+                    <span class="n">focus_district</span><span class="p">,</span> <span class="n">focus_param</span> <span class="o">=</span> <span class="n">val</span>
+                    <span class="n">cmd</span> <span class="o">=</span> <span class="s1">&#39;focus_district&#39;</span> <span class="k">if</span> <span class="n">focus_district</span> <span class="k">else</span> <span class="s1">&#39;focus_state&#39;</span>
+                    <span class="n">param</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_param</span><span class="p">)</span>
 
-                <span class="n">count</span> <span class="o">=</span> <span class="n">packet_count</span>
-                <span class="n">packet_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">obj</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;cmd&#39;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">,</span> <span class="s1">&#39;param&#39;</span><span class="p">:</span> <span class="n">param</span><span class="p">}</span>
+                    <span class="n">tuio_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">)})</span>
 
-                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
-                    <span class="p">{</span><span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;districts&#39;</span><span class="p">:</span> <span class="n">districts_data</span><span class="p">,</span>
-                     <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">state_data</span><span class="p">})</span>
-                <span class="n">designs_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span>
+                    <span class="n">log_obj</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;focus&#39;</span><span class="p">:</span> <span class="n">obj</span><span class="p">,</span>
+                        <span class="s1">&#39;utc_time&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span>
+                    <span class="p">}</span>
+                <span class="k">elif</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;voronoi&#39;</span><span class="p">:</span>
+                    <span class="n">state_data</span><span class="p">,</span> <span class="n">districts_data</span><span class="p">,</span> <span class="n">blocks_data</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">make_computation_packet</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">)</span>
 
-                <span class="n">encoded_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
-                    <span class="p">{</span><span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;fiducials&#39;</span><span class="p">:</span> <span class="n">blocks_data</span><span class="p">})</span>
-                <span class="n">blocks_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">encoded_str</span><span class="p">})</span></div>
+                    <span class="n">count</span> <span class="o">=</span> <span class="n">packet_count</span>
+                    <span class="n">packet_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="n">districts_obj</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;districts&#39;</span><span class="p">:</span> <span class="n">districts_data</span><span class="p">,</span>
+                        <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">state_data</span><span class="p">}</span>
+                    <span class="n">designs_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">districts_obj</span><span class="p">)})</span>
+
+                    <span class="n">fiducials_obj</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;fiducials&#39;</span><span class="p">:</span> <span class="n">blocks_data</span><span class="p">}</span>
+                    <span class="n">blocks_topic</span><span class="o">.</span><span class="n">publish</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">fiducials_obj</span><span class="p">)})</span>
+
+                    <span class="n">log_obj</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;districts&#39;</span><span class="p">:</span> <span class="n">districts_obj</span><span class="p">,</span>
+                        <span class="s1">&#39;fiducials&#39;</span><span class="p">:</span> <span class="n">fiducials_obj</span><span class="p">,</span>
+                        <span class="s1">&#39;utc_time&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span>
+                    <span class="p">}</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">assert</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">fh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+                        <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;,</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">log_obj</span><span class="p">,</span> <span class="n">fh</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">]&#39;</span><span class="p">)</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 </pre></div>
 
           </div>

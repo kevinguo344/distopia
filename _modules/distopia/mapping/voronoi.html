@@ -69,11 +69,6 @@
     <span class="sd">&quot;&quot;&quot;A list of all the :class:`distopia.precinct.Precinct` instances.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">precinct_colliders</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="sd">&quot;&quot;&quot;A list of :class:`~distopia.utils.PolygonCollider`, each corresponding</span>
-<span class="sd">    to a precinct in :attr:`precincts`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="n">districts</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="sd">&quot;&quot;&quot;A list of all current :class:`distopia.district.District` instances.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -117,7 +112,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sites</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">precincts</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">precinct_colliders</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_locations</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fiducial_ids</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">thread_lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
@@ -141,11 +135,6 @@
         <span class="n">fiducial_identity</span> <span class="o">=</span> <span class="p">[</span><span class="n">fiducial_ids</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fiducial_keys</span><span class="p">]</span>
         <span class="n">unique_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">fiducial_identity</span><span class="p">)))</span>
 
-        <span class="c1"># w, h = self.screen_size</span>
-        <span class="c1"># pixel_district_map = np.empty((w, h), dtype=np.uint8)</span>
-        <span class="c1"># fill_voronoi_diagram(</span>
-        <span class="c1">#     pixel_district_map, w, h, np.array(fiducial_pos, dtype=np.float64),</span>
-        <span class="c1">#     np.array(fiducial_identity, dtype=np.uint8))</span>
         <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_district_pixels</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fiducial_pos</span><span class="p">),</span> <span class="n">fiducial_identity</span><span class="p">,</span> <span class="n">unique_ids</span><span class="p">)</span>
         <span class="n">precinct_assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assign_precincts_to_districts</span><span class="p">(</span>
@@ -155,7 +144,7 @@
         <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_districts_boundary</span><span class="p">(</span><span class="n">districts</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_districts_boundary</span><span class="p">(</span><span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">districts</span> <span class="o">=</span> <span class="n">districts</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pixel_district_map</span> <span class="o">=</span> <span class="n">pixel_district_map</span>
@@ -225,7 +214,7 @@
                         <span class="n">callback</span><span class="p">(</span><span class="n">districts</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">error</span><span class="p">)</span>
                     <span class="k">continue</span>
 
-                <span class="bp">self</span><span class="o">.</span><span class="n">set_districts_boundary</span><span class="p">(</span><span class="n">districts</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_districts_boundary</span><span class="p">(</span><span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">)</span>
 
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
@@ -287,13 +276,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">pixel_precinct_map</span> <span class="o">=</span> <span class="n">pixel_precinct_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
             <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
 
-        <span class="n">colliders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_colliders</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">PolygonCollider</span><span class="p">(</span>
-                <span class="n">points</span><span class="o">=</span><span class="n">precinct</span><span class="o">.</span><span class="n">boundary</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span> <span class="k">for</span>
-            <span class="n">precinct</span> <span class="ow">in</span> <span class="n">precincts</span><span class="p">]</span>
-
         <span class="n">precinct_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_indices</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">precinct</span><span class="p">,</span> <span class="n">collider</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">precincts</span><span class="p">,</span> <span class="n">colliders</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">precinct</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">precincts</span><span class="p">):</span>
+            <span class="n">collider</span> <span class="o">=</span> <span class="n">precinct</span><span class="o">.</span><span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span>
+                <span class="n">points</span><span class="o">=</span><span class="n">precinct</span><span class="o">.</span><span class="n">boundary</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="n">collider</span><span class="p">,</span> <span class="n">f</span><span class="p">)(</span><span class="n">pixel_precinct_map</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
 
             <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">collider</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">()</span>
@@ -395,8 +381,9 @@
 
         <span class="k">return</span> <span class="n">districts</span><span class="p">,</span> <span class="n">disconnected</span>
 
-    <span class="k">def</span> <span class="nf">set_districts_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">districts</span><span class="p">):</span>
-        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">set_districts_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">district</span><span class="p">,</span> <span class="n">precincts</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">districts</span><span class="p">,</span> <span class="n">precinct_assignment</span><span class="p">):</span>
+            <span class="k">pass</span>
 
 <div class="viewcode-block" id="VoronoiMapping.assign_precincts_to_districts"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts">[docs]</a>    <span class="k">def</span> <span class="nf">assign_precincts_to_districts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_districts</span><span class="p">,</span> <span class="n">pixel_district_map</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Uses the pre-computed precinct and district maps and assigns</span>
@@ -410,10 +397,10 @@
         <span class="n">precinct_assignment</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_districts</span><span class="p">)]</span>
 
         <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_districts</span><span class="p">,</span> <span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">precinct</span><span class="p">,</span> <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">mask</span><span class="p">),</span> <span class="n">collider</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
-                <span class="nb">zip</span><span class="p">(</span><span class="n">precincts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_indices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_colliders</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">precinct</span><span class="p">,</span> <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">mask</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                <span class="nb">zip</span><span class="p">(</span><span class="n">precincts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precinct_indices</span><span class="p">)):</span>
             <span class="n">bins</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">district_i</span> <span class="o">=</span> <span class="n">collider</span><span class="o">.</span><span class="n">get_arg_max_count</span><span class="p">(</span>
+            <span class="n">district_i</span> <span class="o">=</span> <span class="n">precinct</span><span class="o">.</span><span class="n">collider</span><span class="o">.</span><span class="n">get_arg_max_count</span><span class="p">(</span>
                 <span class="n">pixel_district_map</span><span class="p">[</span><span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">,</span> <span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">],</span>
                 <span class="n">mask</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">n_districts</span><span class="p">,</span>
                 <span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">,</span> <span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -435,28 +422,20 @@
 <span class="sd">        pixel_district_map is filled in with the index of the district</span>
 <span class="sd">        identity in unique_ids to make it 0-n-1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="n">vor</span> <span class="o">=</span> <span class="n">Voronoi</span><span class="p">(</span><span class="n">fiducials</span><span class="p">)</span>
-        <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="n">regions</span><span class="p">,</span> <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">voronoi_finite_polygons_2d</span><span class="p">(</span><span class="n">vor</span><span class="p">)</span>
-        <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">regions</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">2</span>
         <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_size</span>
         <span class="n">pixel_district_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="n">colliders</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">region_indices</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>
             <span class="n">poly</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">vertices</span><span class="p">[</span><span class="n">region_indices</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">))))</span>
-            <span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">poly</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
-            <span class="n">colliders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collider</span><span class="p">)</span>
+            <span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span>
+                <span class="n">points</span><span class="o">=</span><span class="n">poly</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rect</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
 
-        <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">region_indices</span><span class="p">,</span> <span class="n">collider</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">regions</span><span class="p">,</span> <span class="n">colliders</span><span class="p">)):</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">unique_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">fiducials_identity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">collider</span><span class="o">.</span><span class="n">mark_pixels_u8</span><span class="p">(</span><span class="n">pixel_district_map</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
 
-        <span class="n">t4</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
-        <span class="c1"># print(&quot;{:0.5f}, {:0.5f}, {:0.5f}, {:0.5f}&quot;.format(t1 - t0, t2 - t1, t3 - t2, t4 - t3))</span>
         <span class="k">return</span> <span class="n">pixel_district_map</span></div>
 
 <div class="viewcode-block" id="VoronoiMapping.voronoi_finite_polygons_2d"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.voronoi_finite_polygons_2d">[docs]</a>    <span class="k">def</span> <span class="nf">voronoi_finite_polygons_2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vor</span><span class="p">):</span>
