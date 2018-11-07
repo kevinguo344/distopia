@@ -53,6 +53,105 @@ def fill_voronoi_diagram(
             pixels[x, y] = site_ids[i_min]
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def get_region_vertices(
+        np.ndarray[np.uint8_t, ndim=2] pixels, int w, int h,
+        set regions, int start_x, int start_y):
+    cdef list vertices = []
+    cdef int x = start_x
+    cdef int y = start_y
+    cdef int x_dir, y_dir
+    # start with wall below by going down until we hit the wall
+    cdef char wall = 'b'
+    cdef int no_move = 0
+
+    if pixels[x, y] not in regions:
+        raise ValueError(
+            "The start position region doesn't match the provided region")
+
+    # go down until the next is the edge or outside
+    while y > 0 and pixels[x, y - 1] in regions:
+        y -= 1
+    start_y = y
+
+    while True:
+        if wall == 'b':
+            # wall is below, so check if we can move to the right
+            if x < w - 1 and pixels[x + 1, y] in regions:
+                x += 1
+                no_move = 0
+                # is the wall still below us?
+                if y > 0 and pixels[x, y - 1] in regions:
+                    # we lost the wall, it must be on the left b/c we're at
+                    # diag so the next down step will have wall at left
+                    wall = 'l'
+            else:
+                # wall is on right, switch to that state and try to move
+                wall = 'r'
+                no_move += 1
+                if no_move > 5:
+                    raise Exception('Found a pixel island at ({}, {})'.format(x, y))
+                continue
+        elif wall == 'r':
+            # wall is to the right, so check if we can move up
+            if y < h - 1 and pixels[x, y + 1] in regions:
+                y += 1
+                no_move = 0
+                # is the wall still to the right?
+                if x < w - 1 and pixels[x + 1, y] in regions:
+                    # we lost the wall, it must be below b/c we're at
+                    # diag so the next right step will have wall below
+                    wall = 'b'
+            else:
+                # wall is on above, switch to that state and try to move
+                wall = 'a'
+                no_move += 1
+                if no_move > 5:
+                    raise Exception('Found a pixel island at ({}, {})'.format(x, y))
+                continue
+        elif wall == 'a':
+            # wall is above, so check if we can move to the left
+            if x > 0 and pixels[x - 1, y] in regions:
+                x -= 1
+                no_move = 0
+                # is the wall still above us?
+                if y < h - 1 and pixels[x, y + 1] in regions:
+                    # we lost the wall, it must be on the right b/c we're at
+                    # diag so the next up step will have wall at right
+                    wall = 'r'
+            else:
+                # wall is on left, switch to that state and try to move
+                wall = 'l'
+                no_move += 1
+                if no_move > 5:
+                    raise Exception('Found a pixel island at ({}, {})'.format(x, y))
+                continue
+        else:  # wall is 'l'
+            assert wall == 'l'
+            # wall is to the left, so check if we can move down
+            if y > 0 and pixels[x, y - 1] in regions:
+                y -= 1
+                no_move = 0
+                # is the wall still to the left?
+                if x > 0 and pixels[x - 1, y] in regions:
+                    # we lost the wall, it must be above b/c we're at
+                    # diag so the next left step will have wall above
+                    wall = 'a'
+            else:
+                # wall is on below, switch to that state and try to move
+                wall = 'b'
+                no_move += 1
+                if no_move > 5:
+                    raise Exception('Found a pixel island at ({}, {})'.format(x, y))
+                continue
+
+        if x == start_x and y == start_y:
+            break
+        vertices.extend((x, y))
+    return vertices
+
+
 cdef class PolygonCollider(object):
     ''' PolygonCollider checks whether a point is within a polygon defined by a
     list of corner points.

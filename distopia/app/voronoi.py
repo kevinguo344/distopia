@@ -616,15 +616,15 @@ class VoronoiWidget(Widget):
         self.district_graphics = []
 
         if self.show_voronoi_boundaries:
-            PushMatrix()
-            Translate(self.focus_region_width, 0)
             with self.canvas:
+                PushMatrix()
+                Translate(self.focus_region_width, 0)
                 self.district_graphics.append(Color(1, 1, 0, 1))
                 for district in districts:
                     self.district_graphics.append(
                         Line(points=district.boundary + district.boundary[:2],
                              width=2))
-            PopMatrix()
+                PopMatrix()
 
 
 class VoronoiApp(App):

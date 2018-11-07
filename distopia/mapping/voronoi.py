@@ -5,7 +5,7 @@ Voronoi Mapping
 from scipy.spatial import Voronoi
 from distopia.district import District
 from distopia.precinct import Precinct
-from distopia.mapping._voronoi import PolygonCollider, fill_voronoi_diagram
+from distopia.mapping._voronoi import PolygonCollider, get_region_vertices
 import numpy as np
 from collections import defaultdict
 import logging
@@ -99,6 +99,9 @@ class VoronoiMapping(object):
         fiducial_pos = [fiducials[key] for key in fiducial_keys]
         fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
         unique_ids = list(sorted(set(fiducial_identity)))
+        # get first fid pos for that district
+        ids_fiducial_pos = [
+            fiducial_pos[fiducial_identity.index(id_)] for id_ in unique_ids]
 
         pixel_district_map = self.compute_district_pixels(
             np.asarray(fiducial_pos), fiducial_identity, unique_ids)
@@ -109,7 +112,8 @@ class VoronoiMapping(object):
         if error:
             return []
 
-        self.set_districts_boundary(districts, precinct_assignment)
+        self.set_districts_boundary(
+            districts, precinct_assignment, ids_fiducial_pos)
 
         self.districts = districts
         self.pixel_district_map = pixel_district_map
@@ -159,6 +163,10 @@ class VoronoiMapping(object):
             fiducial_pos = [fiducials[key] for key in fiducial_keys]
             fiducial_identity = [fiducial_ids[key] for key in fiducial_keys]
             unique_ids = list(sorted(set(fiducial_identity)))
+            # get first fid pos for that district
+            ids_fiducial_pos = [
+                fiducial_pos[fiducial_identity.index(id_)]
+                for id_ in unique_ids]
 
             self._profiler.enable()
             try:
@@ -179,7 +187,8 @@ class VoronoiMapping(object):
                         callback(districts, [], [], error)
                     continue
 
-                self.set_districts_boundary(districts, precinct_assignment)
+                self.set_districts_boundary(
+                    districts, precinct_assignment, ids_fiducial_pos)
 
             except Exception as e:
                 logging.exception(e)
@@ -346,9 +355,17 @@ class VoronoiMapping(object):
 
         return districts, disconnected
 
-    def set_districts_boundary(self, districts, precinct_assignment):
-        for district, precincts in zip(districts, precinct_assignment):
-            pass
+    def set_districts_boundary(
+            self, districts, precinct_assignment, ids_fiducial_pos):
+        pixel_precinct_map = self.pixel_precinct_map
+
+        for district, precincts, pos in zip(
+                districts, precinct_assignment, ids_fiducial_pos):
+            regions = {p.identity for p in precincts}
+            pos = map(int, map(round, pos))
+            vertices = get_region_vertices(
+                pixel_precinct_map, *self.screen_size, regions, *pos)
+            district.boundary = vertices
 
     def assign_precincts_to_districts(self, n_districts, pixel_district_map):
         """Uses the pre-computed precinct and district maps and assigns
