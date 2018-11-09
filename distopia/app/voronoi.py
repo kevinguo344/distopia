@@ -169,8 +169,8 @@ class VoronoiWidget(Widget):
             h = 34 * len(self.district_blocks_fid) + 5 * (
                 len(self.district_blocks_fid) - 1)
             box = self.gui_touch_focus_buttons = BoxLayout(
-                orientation='vertical', size=('100dp', '{}dp'.format(h)),
-                spacing='5dp', pos=(self.focus_region_width, 0))
+                orientation='vertical', size=(100, h),
+                spacing=5, pos=(self.focus_region_width, 0))
 
             for val in self.district_blocks_fid:
                 btn = ToggleButton(
