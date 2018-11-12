@@ -400,7 +400,9 @@
             <span class="n">pos</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="nb">round</span><span class="p">,</span> <span class="n">pos</span><span class="p">))</span>
             <span class="n">vertices</span> <span class="o">=</span> <span class="n">get_region_vertices</span><span class="p">(</span>
                 <span class="n">pixel_precinct_map</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">screen_size</span><span class="p">,</span> <span class="n">regions</span><span class="p">,</span> <span class="o">*</span><span class="n">pos</span><span class="p">)</span>
+
             <span class="n">district</span><span class="o">.</span><span class="n">boundary</span> <span class="o">=</span> <span class="n">vertices</span>
+            <span class="n">district</span><span class="o">.</span><span class="n">collider</span> <span class="o">=</span> <span class="n">PolygonCollider</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VoronoiMapping.assign_precincts_to_districts"><a class="viewcode-back" href="../../../mapping.html#distopia.mapping.voronoi.VoronoiMapping.assign_precincts_to_districts">[docs]</a>    <span class="k">def</span> <span class="nf">assign_precincts_to_districts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_districts</span><span class="p">,</span> <span class="n">pixel_district_map</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Uses the pre-computed precinct and district maps and assigns</span>
@@ -662,7 +664,7 @@
       &copy;2018, hrc2da.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
     </div>
