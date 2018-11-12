@@ -335,11 +335,8 @@ class VoronoiWidget(Widget):
         self._has_focus = touch
 
         with self.canvas:
-            PushMatrix()
-            Scale(Metrics.density)
             color = Color(rgba=(1, 0, 1, 1))
             point = Point(points=pos, pointsize=7)
-            PopMatrix()
 
         info = {'fid': touch.fid, 'last_pos': pos, 'graphics': (color, point),
                 'focus': True}
@@ -390,11 +387,8 @@ class VoronoiWidget(Widget):
             return True
 
         with self.canvas:
-            PushMatrix()
-            Scale(Metrics.density)
             color = Color(rgba=(1, 1, 1, 1))
             point = Point(points=pos, pointsize=7)
-            PopMatrix()
 
         logical_id = blocks_fid.index(touch.fid)
         key = self.add_fiducial((x - self.focus_region_width, y), logical_id)
@@ -469,11 +463,8 @@ class VoronoiWidget(Widget):
             self.focus_gui_pos = pos
 
             with self.canvas:
-                PushMatrix()
-                Scale(Metrics.density)
                 color = Color(rgba=(1, 0, 1, 1))
                 point = Point(points=pos, pointsize=7)
-                PopMatrix()
             self.fiducial_graphics['focus'] = color, point
             info['focus'] = True
             info['moved'] = True
@@ -803,7 +794,10 @@ class VoronoiApp(App):
             fname = os.path.join(
                 os.path.dirname(distopia.__file__), 'data',
                 self.alignment_filename)
-            mat = np.loadtxt(fname, delimiter=',', skiprows=3)
+            try:
+                mat = np.loadtxt(fname, delimiter=',', skiprows=3)
+            except Exception as e:
+                logging.exception("Not using alignment: {}".format(e))
 
         self.create_voronoi()
         self.load_metrics()
