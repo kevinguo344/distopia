@@ -35,6 +35,7 @@ from kivy.properties import NumericProperty
 from kivy.graphics.context_instructions import \
     PushMatrix, PopMatrix, Rotate, Translate, Scale, MatrixInstruction
 from kivy.uix.spinner import Spinner
+from kivy.uix.scatter import Scatter
 
 import distopia
 from distopia.app.voronoi_data import GeoData, MetricData
@@ -171,7 +172,7 @@ class VoronoiWidget(Widget):
                 len(self.district_blocks_fid) - 1)
             box = self.gui_touch_focus_buttons = BoxLayout(
                 orientation='vertical', size=(dp(100), dp(h)),
-                spacing=dp(5), pos=(dp(self.focus_region_width), 0))
+                spacing=dp(5), pos=(self.focus_region_width, 0))
 
             for val in self.district_blocks_fid:
                 btn = ToggleButton(
@@ -206,12 +207,9 @@ class VoronoiWidget(Widget):
                 y1 = y0 + focus_metric_height
 
                 self.add_widget(
-                    Factory.SizedLabel(text=name, pos=(dp(x0), dp(y0))))
+                    Factory.SizedLabel(text=name, pos=(x0, y0)))
                 with self.canvas:
-                    PushMatrix()
-                    Scale(Metrics.density)
                     Line(points=[x0, y0, x1, y0, x1, y1, x0, y1], width=2)
-                    PopMatrix()
 
                 i += 1
                 if i >= len(focus_metrics):
@@ -242,8 +240,8 @@ class VoronoiWidget(Widget):
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
             PushMatrix()
-            Scale(Metrics.density)
             Translate(self.focus_region_width, 0)
+            Scale(Metrics.density)
             for precinct in self.voronoi_mapping.precincts:
                 assert len(precinct.boundary) >= 6
                 tess = Tesselator()
@@ -625,8 +623,8 @@ class VoronoiWidget(Widget):
         if self.show_voronoi_boundaries:
             with self.canvas:
                 PushMatrix()
-                Scale(Metrics.density)
                 Translate(self.focus_region_width, 0)
+                Scale(Metrics.density)
                 self.district_graphics.append(Color(1, 1, 0, 1))
                 for district in districts:
                     self.district_graphics.append(
@@ -689,6 +687,8 @@ class VoronoiApp(App):
 
     max_fiducials_per_district = 5
 
+    scale = 1.
+
     def load_metrics(self):
         assert self.use_county_dataset
         names = {'Saint Croix': 'St. Croix'}
@@ -747,10 +747,10 @@ class VoronoiApp(App):
     def show_precinct_labels(self, widget):
         offset = widget.focus_region_width
         for i, precinct in enumerate(self.precincts):
-            x, y = precinct.location
+            x, y = map(dp, precinct.location)
             x += offset
             label = Label(
-                text=str(precinct.identity), center=(dp(x), dp(y)),
+                text=str(precinct.identity), center=(x, y),
                 font_size='20dp')
             widget.add_widget(label)
 
@@ -761,7 +761,7 @@ class VoronoiApp(App):
                 'focus_block_logical_id', 'district_blocks_fid', 'use_ros',
                 'metrics', 'ros_host', 'ros_port', 'show_voronoi_boundaries',
                 'focus_metrics', 'focus_metric_width', 'focus_metric_height',
-                'log_data', 'max_fiducials_per_district']
+                'log_data', 'max_fiducials_per_district', 'scale']
 
         fname = os.path.join(
             os.path.dirname(distopia.__file__), 'data', 'config.json')
@@ -806,7 +806,8 @@ class VoronoiApp(App):
         widget = VoronoiWidget(
             voronoi_mapping=self.voronoi_mapping,
             table_mode=self.table_mode, align_mat=mat,
-            screen_offset=self.screen_offset, ros_bridge=self.ros_bridge,
+            screen_offset=list(map(dp, self.screen_offset)),
+            ros_bridge=self.ros_bridge,
             district_blocks_fid=self.district_blocks_fid,
             focus_block_fid=self.focus_block_fid,
             focus_block_logical_id=self.focus_block_logical_id,
@@ -814,8 +815,8 @@ class VoronoiApp(App):
             state_metrics_fn=self.metric_data.create_state_metrics,
             show_voronoi_boundaries=self.show_voronoi_boundaries,
             focus_metrics=self.focus_metrics, screen_size=self.screen_size,
-            focus_metric_height=self.focus_metric_height,
-            focus_metric_width=self.focus_metric_width,
+            focus_metric_height=dp(self.focus_metric_height),
+            focus_metric_width=dp(self.focus_metric_width),
             max_fiducials_per_district=self.max_fiducials_per_district)
 
         if self.use_ros:
@@ -839,7 +840,14 @@ class VoronoiApp(App):
             if self.show_precinct_id:
                 self.show_precinct_labels(widget)
         self._profiler = widget._profiler = cProfile.Profile()
-        return widget
+        widget.size_hint = None, None
+        scatter = Scatter(
+            do_rotation=False, do_scale=False, do_translation_y=False,
+            do_translation_x=False, scale=self.scale)
+        scatter.add_widget(widget)
+        scatter.fbind('pos', lambda *l: setattr(scatter, 'pos', (0, 0)))
+        scatter.pos = 0, 0
+        return scatter
 
 
 Builder.load_string("""
