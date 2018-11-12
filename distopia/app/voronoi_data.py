@@ -312,5 +312,17 @@ class MetricData(object):
                     vote1, vote2 = vote2, vote1
                 metric.set_value(vote1 - (vote1 + vote2) / 2., 'pvi')
 
+        if 'compactness' in self.metrics:
+            for district in districts:
+                metric = district.metrics['compactness'] = \
+                    DistrictScalarMetric(district=district, name='compactness')
+
+                perimeter = len(district.boundary) / 2.
+                area = district.collider.get_area()
+                r = perimeter / (2 * math.pi)
+                circle_area = math.pi * r ** 2
+
+                metric.set_value(area / circle_area, 'compactness')
+
     def create_state_metrics(self, districts):
         return []

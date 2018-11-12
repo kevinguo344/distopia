@@ -97,7 +97,8 @@ class RosBridge(object):
             district_data = {
                 'district_id': district.identity,
                 'precincts': [p.identity for p in district.precincts],
-                'metrics': [m.get_data() for m in district.metrics.values()]
+                'metrics': [m.get_data() for m in district.metrics.values()],
+                'boundary': district.boundary
             }
             districts_data.append(district_data)
 

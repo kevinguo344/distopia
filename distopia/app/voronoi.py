@@ -30,6 +30,7 @@ from kivy.graphics import Color
 import matplotlib.pyplot as plt
 from kivy.clock import Clock
 from kivy.factory import Factory
+from kivy.metrics import Metrics, dp
 from kivy.properties import NumericProperty
 from kivy.graphics.context_instructions import \
     PushMatrix, PopMatrix, Rotate, Translate, Scale, MatrixInstruction
@@ -169,8 +170,8 @@ class VoronoiWidget(Widget):
             h = 34 * len(self.district_blocks_fid) + 5 * (
                 len(self.district_blocks_fid) - 1)
             box = self.gui_touch_focus_buttons = BoxLayout(
-                orientation='vertical', size=(100, h),
-                spacing=5, pos=(self.focus_region_width, 0))
+                orientation='vertical', size=(dp(100), dp(h)),
+                spacing=dp(5), pos=(dp(self.focus_region_width), 0))
 
             for val in self.district_blocks_fid:
                 btn = ToggleButton(
@@ -204,9 +205,13 @@ class VoronoiWidget(Widget):
                 y0 = row * focus_metric_height
                 y1 = y0 + focus_metric_height
 
-                self.add_widget(Factory.SizedLabel(text=name, pos=(x0, y0)))
+                self.add_widget(
+                    Factory.SizedLabel(text=name, pos=(dp(x0), dp(y0))))
                 with self.canvas:
+                    PushMatrix()
+                    Scale(Metrics.density)
                     Line(points=[x0, y0, x1, y0, x1, y1, x0, y1], width=2)
+                    PopMatrix()
 
                 i += 1
                 if i >= len(focus_metrics):
@@ -228,7 +233,7 @@ class VoronoiWidget(Widget):
 
         with self.canvas.before:
             PushMatrix()
-            Translate(*screen_offset)
+            Translate(*[v * Metrics.density for v in screen_offset])
         with self.canvas.after:
             PopMatrix()
         self.show_precincts()
@@ -237,6 +242,7 @@ class VoronoiWidget(Widget):
         precinct_graphics = self.precinct_graphics = {}
         with self.canvas:
             PushMatrix()
+            Scale(Metrics.density)
             Translate(self.focus_region_width, 0)
             for precinct in self.voronoi_mapping.precincts:
                 assert len(precinct.boundary) >= 6
@@ -329,8 +335,11 @@ class VoronoiWidget(Widget):
         self._has_focus = touch
 
         with self.canvas:
+            PushMatrix()
+            Scale(Metrics.density)
             color = Color(rgba=(1, 0, 1, 1))
             point = Point(points=pos, pointsize=7)
+            PopMatrix()
 
         info = {'fid': touch.fid, 'last_pos': pos, 'graphics': (color, point),
                 'focus': True}
@@ -381,8 +390,11 @@ class VoronoiWidget(Widget):
             return True
 
         with self.canvas:
+            PushMatrix()
+            Scale(Metrics.density)
             color = Color(rgba=(1, 1, 1, 1))
             point = Point(points=pos, pointsize=7)
+            PopMatrix()
 
         logical_id = blocks_fid.index(touch.fid)
         key = self.add_fiducial((x - self.focus_region_width, y), logical_id)
@@ -457,8 +469,11 @@ class VoronoiWidget(Widget):
             self.focus_gui_pos = pos
 
             with self.canvas:
+                PushMatrix()
+                Scale(Metrics.density)
                 color = Color(rgba=(1, 0, 1, 1))
                 point = Point(points=pos, pointsize=7)
+                PopMatrix()
             self.fiducial_graphics['focus'] = color, point
             info['focus'] = True
             info['moved'] = True
@@ -484,8 +499,9 @@ class VoronoiWidget(Widget):
             (x - self.focus_region_width, y), current_id)
 
         label = self.fiducial_graphics[key] = Label(
-            text=str(self.current_fid_id), center=tuple(map(float, pos)),
-            font_size='20sp')
+            text=str(self.current_fid_id),
+            center=tuple(map(float, pos)),
+            font_size='20dp')
         self.add_widget(label)
         info['fiducial_key'] = key
         info['moved'] = True
@@ -618,6 +634,7 @@ class VoronoiWidget(Widget):
         if self.show_voronoi_boundaries:
             with self.canvas:
                 PushMatrix()
+                Scale(Metrics.density)
                 Translate(self.focus_region_width, 0)
                 self.district_graphics.append(Color(1, 1, 0, 1))
                 for district in districts:
@@ -742,8 +759,8 @@ class VoronoiApp(App):
             x, y = precinct.location
             x += offset
             label = Label(
-                text=str(precinct.identity), center=(x, y),
-                font_size=20)
+                text=str(precinct.identity), center=(dp(x), dp(y)),
+                font_size='20dp')
             widget.add_widget(label)
 
     def load_config(self):

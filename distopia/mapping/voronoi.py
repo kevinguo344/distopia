@@ -365,7 +365,9 @@ class VoronoiMapping(object):
             pos = map(int, map(round, pos))
             vertices = get_region_vertices(
                 pixel_precinct_map, *self.screen_size, regions, *pos)
+
             district.boundary = vertices
+            district.collider = PolygonCollider(points=vertices, cache=False)
 
     def assign_precincts_to_districts(self, n_districts, pixel_district_map):
         """Uses the pre-computed precinct and district maps and assigns
