@@ -307,18 +307,23 @@ class VoronoiWidget(Widget):
             return
 
         x, y = pos
+        x_ = (x - self.focus_region_width) / Metrics.density
+        y_ = y / Metrics.density
         if x < self.focus_region_width:
             rows = self.n_focus_rows
 
             metric = ''
-            if y < rows * self.focus_metric_height:
+            if y < len(self.focus_metrics) * self.focus_metric_height:
                 row = int(y / self.focus_metric_height)
                 col = int(x / self.focus_metric_width)
                 metric = self.focus_metrics[col * rows + row]
             self.ros_bridge.update_tuio_focus(False, metric)
         else:
-            district = self.voronoi_mapping.get_pos_district(
-                (x - self.focus_region_width, y))
+            try:
+                district = self.voronoi_mapping.get_pos_district(
+                    (x_, y_))
+            except (IndexError, TypeError):
+                district = None
 
             # it's not on any district, send a no block present signal
             if district is None:
@@ -439,9 +444,10 @@ class VoronoiWidget(Widget):
         info = {'moved': False, 'fiducial_key': None}
 
         # are we near a voronoi touch?
-        x_offset = self.focus_region_width
+        x_ = (x - self.focus_region_width) / Metrics.density
+        y_ = y / Metrics.density
         for key, (x2, y2) in self.voronoi_mapping.get_fiducials().items():
-            if ((x - x_offset - x2) ** 2 + (y - y2) ** 2) ** .5 < 10:
+            if ((x_ - x2) ** 2 + (y_ - y2) ** 2) ** .5 < 10:
                 info['fiducial_key'] = key
                 self.touches[touch.uid] = info
                 return True
@@ -471,7 +477,7 @@ class VoronoiWidget(Widget):
             self.handle_focus_block(pos)
             return True
 
-        if x < self.focus_region_width:
+        if x_ < 0:
             return True
 
         # with self.canvas:
@@ -484,8 +490,7 @@ class VoronoiWidget(Widget):
                  if val == current_id]) >= self.max_fiducials_per_district:
             return True
 
-        key = self.add_fiducial(
-            (x - self.focus_region_width, y), current_id)
+        key = self.add_fiducial((x_, y_), current_id)
 
         label = self.fiducial_graphics[key] = Label(
             text=str(self.current_fid_id),
@@ -504,6 +509,8 @@ class VoronoiWidget(Widget):
         before.
         """
         x, y = pos = self.align_touch(touch.pos)
+        x_ = (x - self.focus_region_width) / Metrics.density
+        y_ = y / Metrics.density
         info = self.touches[touch.uid]
         info['moved'] = True
 
@@ -514,7 +521,7 @@ class VoronoiWidget(Widget):
             return True
 
         key = info['fiducial_key']
-        pos_ = (x - self.focus_region_width, y)
+        pos_ = (x_, y_)
         if self.voronoi_mapping.get_fiducials()[key] != pos_:
             self.fiducial_graphics[key].center = tuple(map(float, pos))
             self.voronoi_mapping.move_fiducial(key, pos_)
@@ -526,6 +533,8 @@ class VoronoiWidget(Widget):
         before.
         """
         x, y = pos = self.align_touch(touch.pos)
+        x_ = (x - self.focus_region_width) / Metrics.density
+        y_ = y / Metrics.density
 
         info = self.touches.pop(touch.uid)
         if 'focus' in info:
@@ -546,7 +555,7 @@ class VoronoiWidget(Widget):
             return True
 
         key = info['fiducial_key']
-        pos_ = (x - self.focus_region_width, y)
+        pos_ = (x_, y_)
         if info['moved']:
             if self.voronoi_mapping.get_fiducials()[key] != pos_:
                 self.fiducial_graphics[key].center = tuple(map(float, pos))
@@ -814,7 +823,7 @@ class VoronoiApp(App):
             district_metrics_fn=self.metric_data.compute_district_metrics,
             state_metrics_fn=self.metric_data.create_state_metrics,
             show_voronoi_boundaries=self.show_voronoi_boundaries,
-            focus_metrics=self.focus_metrics, screen_size=self.screen_size,
+            focus_metrics=self.focus_metrics, screen_size=list(map(dp, self.screen_size)),
             focus_metric_height=dp(self.focus_metric_height),
             focus_metric_width=dp(self.focus_metric_width),
             max_fiducials_per_district=self.max_fiducials_per_district)
